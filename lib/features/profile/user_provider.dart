@@ -36,7 +36,9 @@ class UserProvider extends ChangeNotifier {
     String? name,
     List<String>? sports,
     int? skillLevel,
+    Map<String, int>? sportRatings,
     String? frequency,
+    String? profilePictureUrl,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -47,7 +49,9 @@ class UserProvider extends ChangeNotifier {
       if (name != null) data['name'] = name;
       if (sports != null) data['sports'] = sports;
       if (skillLevel != null) data['skillLevel'] = skillLevel;
+      if (sportRatings != null) data['sportRatings'] = sportRatings;
       if (frequency != null) data['frequency'] = frequency;
+      if (profilePictureUrl != null) data['profilePictureUrl'] = profilePictureUrl;
 
       await _userService.updateUserProfile(uid, data);
       _isLoading = false;

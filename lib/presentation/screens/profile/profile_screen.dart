@@ -74,56 +74,132 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ── Skill Level Card ──
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Helpers.skillColor(profile.skillLevel).withAlpha(30),
-                    Helpers.skillColor(profile.skillLevel).withAlpha(10),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Helpers.skillColor(profile.skillLevel).withAlpha(40),
+            // ── Per-Sport Ratings ──
+            if (profile.sports.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Skill Ratings',
+                  style: theme.textTheme.titleLarge,
                 ),
               ),
-              child: Row(
-                children: [
-                  SkillIndicator(
-                    skillLevel: profile.skillLevel,
-                    size: 56,
-                    showLabel: true,
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 12),
+              ...profile.sports.map((sport) {
+                final rating = profile.ratingForSport(sport);
+                final color = Helpers.sportColor(sport);
+                final skillColor = Helpers.skillColor(rating);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          color.withAlpha(25),
+                          color.withAlpha(8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: color.withAlpha(40)),
+                    ),
+                    child: Row(
                       children: [
+                        Icon(Helpers.sportIcon(sport),
+                            size: 24, color: color),
+                        const SizedBox(width: 12),
                         Text(
-                          'Skill Rating',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withAlpha(150),
+                          sport,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${profile.skillLevel}/100',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Helpers.skillColor(profile.skillLevel),
-                          ),
+                        const Spacer(),
+                        SkillIndicator(
+                          skillLevel: rating,
+                          size: 36,
+                          showLabel: false,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '$rating/100',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: skillColor,
+                              ),
+                            ),
+                            Text(
+                              Helpers.skillLabel(rating),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: skillColor.withAlpha(200),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ],
+                );
+              }),
+              const SizedBox(height: 12),
+            ] else ...[
+              // ── Fallback: Overall Skill Level Card ──
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Helpers.skillColor(profile.skillLevel).withAlpha(30),
+                      Helpers.skillColor(profile.skillLevel).withAlpha(10),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Helpers.skillColor(profile.skillLevel).withAlpha(40),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    SkillIndicator(
+                      skillLevel: profile.skillLevel,
+                      size: 56,
+                      showLabel: true,
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Skill Rating',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color:
+                                  theme.colorScheme.onSurface.withAlpha(150),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${profile.skillLevel}/100',
+                            style:
+                                theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: Helpers.skillColor(profile.skillLevel),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
 
             // ── Stats Row ──
             Row(

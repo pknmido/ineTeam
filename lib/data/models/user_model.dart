@@ -7,7 +7,8 @@ class UserModel {
   final String email;
   final String? profilePictureUrl;
   final List<String> sports;
-  final int skillLevel; // 1-100
+  final int skillLevel; // 1-100 (legacy / overall default)
+  final Map<String, int> sportRatings; // per-sport skill level, e.g. {'Football': 60, 'Basketball': 40}
   final String frequency; // 'casual' | 'regular' | 'competitive'
   final List<String> createdMatches;
   final List<String> joinedMatches;
@@ -20,6 +21,7 @@ class UserModel {
     this.profilePictureUrl,
     this.sports = const [],
     this.skillLevel = 50,
+    this.sportRatings = const {},
     this.frequency = 'casual',
     this.createdMatches = const [],
     this.joinedMatches = const [],
@@ -35,6 +37,17 @@ class UserModel {
         ? name
         : (email.isNotEmpty ? email.split('@').first : 'Player');
 
+    // Parse per-sport ratings map
+    Map<String, int> sportRatings = {};
+    final rawRatings = map['sportRatings'];
+    if (rawRatings is Map) {
+      rawRatings.forEach((k, v) {
+        if (k is String && v is int) {
+          sportRatings[k] = v;
+        }
+      });
+    }
+
     return UserModel(
       uid: uid,
       name: displayName,
@@ -42,6 +55,7 @@ class UserModel {
       profilePictureUrl: map['profilePictureUrl'],
       sports: List<String>.from(map['sports'] ?? []),
       skillLevel: map['skillLevel'] ?? 50,
+      sportRatings: sportRatings,
       frequency: map['frequency'] ?? 'casual',
       createdMatches: List<String>.from(map['createdMatches'] ?? []),
       joinedMatches: List<String>.from(map['joinedMatches'] ?? []),
@@ -57,6 +71,7 @@ class UserModel {
       'profilePictureUrl': profilePictureUrl,
       'sports': sports,
       'skillLevel': skillLevel,
+      'sportRatings': sportRatings,
       'frequency': frequency,
       'createdMatches': createdMatches,
       'joinedMatches': joinedMatches,
@@ -71,6 +86,7 @@ class UserModel {
     String? profilePictureUrl,
     List<String>? sports,
     int? skillLevel,
+    Map<String, int>? sportRatings,
     String? frequency,
     List<String>? createdMatches,
     List<String>? joinedMatches,
@@ -82,6 +98,7 @@ class UserModel {
       profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
       sports: sports ?? this.sports,
       skillLevel: skillLevel ?? this.skillLevel,
+      sportRatings: sportRatings ?? this.sportRatings,
       frequency: frequency ?? this.frequency,
       createdMatches: createdMatches ?? this.createdMatches,
       joinedMatches: joinedMatches ?? this.joinedMatches,
@@ -91,4 +108,7 @@ class UserModel {
 
   /// Whether the user has completed their profile setup.
   bool get hasCompletedProfile => name.isNotEmpty && sports.isNotEmpty;
+
+  /// Returns the skill rating for a specific sport, falling back to skillLevel.
+  int ratingForSport(String sport) => sportRatings[sport] ?? skillLevel;
 }

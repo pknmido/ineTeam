@@ -103,10 +103,7 @@ class MatchProvider extends ChangeNotifier {
     int? minSkill,
     int? maxSkill,
   }) async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
-
     try {
       final match = MatchModel(
         id: _uuid.v4(),
@@ -128,17 +125,13 @@ class MatchProvider extends ChangeNotifier {
       );
 
       await _matchRepository.createMatch(match);
-      _isLoading = false;
-      notifyListeners();
       return true;
     } on MatchRepositoryException catch (e) {
       _errorMessage = e.message;
-      _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
       _errorMessage = 'Failed to create match.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }
@@ -146,23 +139,16 @@ class MatchProvider extends ChangeNotifier {
 
   // ─── Join Match ──────────────────────────────────────────────────────────
   Future<bool> joinMatch(String matchId, String userId, String teamId) async {
-    _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
-
     try {
       await _matchRepository.joinMatch(matchId, userId, teamId);
-      _isLoading = false;
-      notifyListeners();
       return true;
     } on MatchRepositoryException catch (e) {
       _errorMessage = e.message;
-      _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
       _errorMessage = 'Failed to join match.';
-      _isLoading = false;
       notifyListeners();
       return false;
     }
@@ -172,7 +158,6 @@ class MatchProvider extends ChangeNotifier {
   Future<bool> leaveMatch(String matchId, String userId) async {
     try {
       await _matchRepository.leaveMatch(matchId, userId);
-      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Failed to leave match.';
@@ -213,6 +198,19 @@ class MatchProvider extends ChangeNotifier {
     notifyListeners();
     return false;
   }
+  }
+
+  Future<bool> updateScore(String matchId, int scoreA, int scoreB) async {
+    _errorMessage = null;
+
+    try {
+      await _matchRepository.updateScore(matchId, scoreA, scoreB);
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to update score.';
+      notifyListeners();
+      return false;
+    }
   }
 
   // ─── Filters ─────────────────────────────────────────────────────────────

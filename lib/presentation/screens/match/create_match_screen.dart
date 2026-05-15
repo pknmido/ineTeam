@@ -3,11 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/helpers.dart';
-import '../../../core/utils/validators.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/matches/match_provider.dart';
 import '../../../data/services/match_service.dart';
-import '../../widgets/loading_overlay.dart';
 
 /// Screen for creating a new match.
 class CreateMatchScreen extends StatefulWidget {
@@ -26,7 +24,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   String _selectedSport = SportType.football.label;
   String _selectedLocation = SportType.football.availableLocations.first;
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   TimeOfDay _selectedTime = const TimeOfDay(hour: 17, minute: 30);
   int _maxPlayers = 10;
   bool _useSkillRange = false;
@@ -51,6 +49,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    if (now.hour > 21 || (now.hour == 21 && now.minute >= 30)) {
+      _selectedDate = now.add(const Duration(days: 1));
+    } else {
+      _selectedDate = now;
+    }
     _fetchReservedTimes();
   }
 
@@ -160,9 +164,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       appBar: AppBar(
         title: const Text('Create Match'),
       ),
-      body: LoadingOverlay(
-        isLoading: _isSubmitting,
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
@@ -191,13 +193,23 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                           Icon(
                             Helpers.sportIcon(sport.label),
                             size: 18,
-                            color: isSelected ? color : null,
+                            color: isSelected ? color : theme.colorScheme.onSurface.withAlpha(180),
                           ),
                           const SizedBox(width: 6),
-                          Text(sport.label),
+                          Text(
+                            sport.label,
+                            style: TextStyle(
+                              color: isSelected ? color : theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                       selectedColor: color.withAlpha(40),
+                      backgroundColor: theme.colorScheme.surface,
+                      side: BorderSide(
+                        color: isSelected ? color.withAlpha(120) : theme.colorScheme.outline.withAlpha(60),
+                      ),
                       onSelected: (_) {
                         setState(() {
                           _selectedSport = sport.label;
@@ -228,8 +240,18 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     final isSelected = _selectedLocation == loc;
                     return ChoiceChip(
                       selected: isSelected,
-                      label: Text(loc),
+                      label: Text(
+                        loc,
+                        style: TextStyle(
+                          color: isSelected ? sportColor : theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       selectedColor: sportColor.withAlpha(40),
+                      backgroundColor: theme.colorScheme.surface,
+                      side: BorderSide(
+                        color: isSelected ? sportColor.withAlpha(120) : theme.colorScheme.outline.withAlpha(60),
+                      ),
                       onSelected: (_) {
                         setState(() {
                           _selectedLocation = loc;
@@ -355,6 +377,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _teamAController,
+                        maxLength: 20,
                         decoration: const InputDecoration(
                           labelText: 'Team A Name',
                           hintText: 'e.g. Red Squad',
@@ -365,6 +388,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _teamBController,
+                        maxLength: 20,
                         decoration: const InputDecoration(
                           labelText: 'Team B Name',
                           hintText: 'e.g. Blue Squad',
@@ -445,8 +469,17 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: _isSubmitting ? null : _handleCreate,
-                    icon: const Icon(Icons.add_circle_outline),
-                    label: const Text('Create Match'),
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.add_circle_outline),
+                    label: Text(_isSubmitting ? 'Creating...' : 'Create Match'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: sportColor,
                     ),
@@ -458,7 +491,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
+

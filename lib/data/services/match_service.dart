@@ -102,8 +102,9 @@ class MatchService {
       final maxPerTeam = match.maxPlayers ~/ 2;
       
       List<String> currentTeamArray;
-      if (teamId == 'A') currentTeamArray = match.teamA;
-      else if (teamId == 'B') currentTeamArray = match.teamB;
+      if (teamId == 'A') {
+        currentTeamArray = match.teamA;
+      } else if (teamId == 'B') currentTeamArray = match.teamB;
       else return false;
 
       // Prevent joining full team
@@ -150,6 +151,14 @@ class MatchService {
   /// Updates match status (e.g. to 'completed').
   Future<void> updateMatchStatus(String matchId, String status) async {
     await _matchesCollection.doc(matchId).update({'status': status});
+  }
+
+  /// Saves the final score for a match.
+  Future<void> updateScore(String matchId, int scoreA, int scoreB) async {
+    await _matchesCollection.doc(matchId).update({
+      'scoreA': scoreA,
+      'scoreB': scoreB,
+    });
   }
 
   /// Deletes a match document.

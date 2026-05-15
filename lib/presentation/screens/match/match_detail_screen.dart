@@ -10,7 +10,6 @@ import '../../../data/models/match_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../widgets/player_avatar.dart';
 import '../../widgets/skill_indicator.dart';
-import '../../widgets/team_balance_view.dart';
 
 /// Match detail screen showing full match info, players, and team balancing.
 class MatchDetailScreen extends StatelessWidget {
@@ -50,7 +49,7 @@ class MatchDetailScreen extends StatelessWidget {
           appBar: AppBar(
             title: Text(match.sport),
             actions: [
-              if (isCreator)
+              if (isCreator && match.isUpcoming)
                 PopupMenuButton<String>(
                   onSelected: (val) async {
                     if (val == 'delete') {
@@ -309,68 +308,130 @@ class MatchDetailScreen extends StatelessWidget {
             ),
             child: SafeArea(
               child: SizedBox(
-                height: 56,
-                child: hasJoined
-                    ? (isCreator
-                        ? ElevatedButton(
-                            onPressed: null,
-                            child: const Text('You created this match'),
-                          )
-                        : OutlinedButton(
-                            onPressed: () async {
-                              await context
-                                  .read<MatchProvider>()
-                                  .leaveMatch(matchId, auth.userId);
-                              if (context.mounted) {
-                                Helpers.showSnackBar(context, 'Left the match');
-                              }
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                            ),
-                            child: const Text('Leave Match'),
-                          ))
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: match.teamA.length >= match.maxPlayers ~/ 2
-                                  ? null
-                                  : () => _joinTeam(context, matchId, auth.userId, 'A', match.teamAName),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF10B981), // Emerald
+                height: !match.isUpcoming ? 72 : (hasJoined ? 56 : 72),
+                child: !match.isUpcoming 
+                    ? (isCreator 
+                        ? (match.hasScore 
+                            ? Center(child: Text('Final Score: ${match.scoreA} - ${match.scoreB}', style: theme.textTheme.titleLarge)) 
+                            : ElevatedButton(
+                                onPressed: () => _showAddScoreDialog(context, match),
+                                child: const Text('Add Score'),
+                              ))
+                        : (match.hasScore 
+                            ? Center(child: Text('Final Score: ${match.scoreA} - ${match.scoreB}', style: theme.textTheme.titleLarge))
+                            : const Center(child: Text('Match finished'))))
+                    : (hasJoined
+                        ? (isCreator
+                            ? ElevatedButton(
+                                onPressed: null,
+                                child: const Text('You created this match'),
+                              )
+                            : OutlinedButton(
+                                onPressed: () async {
+                                  await context
+                                      .read<MatchProvider>()
+                                      .leaveMatch(matchId, auth.userId);
+                                  if (context.mounted) {
+                                    Helpers.showSnackBar(context, 'Left the match');
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                ),
+                                child: const Text('Leave Match'),
+                              ))
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: match.teamA.length >= match.maxPlayers ~/ 2
+                                      ? null
+                                      : () => _joinTeam(context, matchId, auth.userId, 'A', match.teamAName),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981), // Emerald
+                                  ),
+                                  child: Text(
+                                    match.teamA.length >= match.maxPlayers ~/ 2
+                                        ? 'Full'
+                                        : 'Join ${match.teamAName}',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
-                              child: Text(
-                                match.teamA.length >= match.maxPlayers ~/ 2
-                                    ? 'Full'
-                                    : 'Join ${match.teamAName}',
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: match.teamB.length >= match.maxPlayers ~/ 2
+                                      ? null
+                                      : () => _joinTeam(context, matchId, auth.userId, 'B', match.teamBName),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF38BDF8), // Sky
+                                  ),
+                                  child: Text(
+                                    match.teamB.length >= match.maxPlayers ~/ 2
+                                        ? 'Full'
+                                        : 'Join ${match.teamBName}',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: match.teamB.length >= match.maxPlayers ~/ 2
-                                  ? null
-                                  : () => _joinTeam(context, matchId, auth.userId, 'B', match.teamBName),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF38BDF8), // Sky
-                              ),
-                              child: Text(
-                                match.teamB.length >= match.maxPlayers ~/ 2
-                                    ? 'Full'
-                                    : 'Join ${match.teamBName}',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                            ],
+                          )),
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showAddScoreDialog(BuildContext context, MatchModel match) async {
+    final scoreAController = TextEditingController();
+    final scoreBController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Final Score'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: scoreAController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: '${match.teamAName} Score'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: scoreBController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: '${match.teamBName} Score'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final scoreA = int.tryParse(scoreAController.text);
+              final scoreB = int.tryParse(scoreBController.text);
+              if (scoreA != null && scoreB != null) {
+                await context.read<MatchProvider>().updateScore(match.id, scoreA, scoreB);
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 

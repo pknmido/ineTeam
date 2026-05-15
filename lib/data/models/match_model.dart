@@ -19,6 +19,8 @@ class MatchModel {
   final int? maxSkill;
   final String status; // 'open' | 'full' | 'completed'
   final DateTime createdAt;
+  final int? scoreA;
+  final int? scoreB;
 
   const MatchModel({
     required this.id,
@@ -38,6 +40,8 @@ class MatchModel {
     this.maxSkill,
     this.status = 'open',
     required this.createdAt,
+    this.scoreA,
+    this.scoreB,
   });
 
   /// Creates a MatchModel from a Firestore document map.
@@ -60,6 +64,8 @@ class MatchModel {
       maxSkill: map['maxSkill'],
       status: map['status'] ?? 'open',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      scoreA: map['scoreA'],
+      scoreB: map['scoreB'],
     );
   }
 
@@ -82,6 +88,8 @@ class MatchModel {
       'maxSkill': maxSkill,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
+      'scoreA': scoreA,
+      'scoreB': scoreB,
     };
   }
 
@@ -102,6 +110,8 @@ class MatchModel {
     int? minSkill,
     int? maxSkill,
     String? status,
+    int? scoreA,
+    int? scoreB,
   }) {
     return MatchModel(
       id: id,
@@ -121,6 +131,8 @@ class MatchModel {
       maxSkill: maxSkill ?? this.maxSkill,
       status: status ?? this.status,
       createdAt: createdAt,
+      scoreA: scoreA ?? this.scoreA,
+      scoreB: scoreB ?? this.scoreB,
     );
   }
 
@@ -138,6 +150,9 @@ class MatchModel {
 
   /// Whether the match is in the future.
   bool get isUpcoming => dateTime.isAfter(DateTime.now());
+
+  /// Whether a score has been recorded.
+  bool get hasScore => scoreA != null && scoreB != null;
 
   /// Whether the given user is the creator.
   bool isCreator(String userId) => creatorId == userId;

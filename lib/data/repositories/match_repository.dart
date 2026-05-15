@@ -45,7 +45,11 @@ class MatchRepository {
   }
 
   Future<void> updateMatchStatus(String matchId, String status) async {
-  await _matchService.updateMatchStatus(matchId, status);
+    await _matchService.updateMatchStatus(matchId, status);
+  }
+
+  Future<void> updateScore(String matchId, int scoreA, int scoreB) async {
+    await _matchService.updateScore(matchId, scoreA, scoreB);
   }
 
   /// Joins a match with validation.
@@ -79,8 +83,19 @@ class MatchRepository {
   }
 
   /// Deletes a match (only the creator should call this).
+  /// Also removes the match from the creator's createdMatches array.
   Future<void> deleteMatch(String matchId) async {
-  await _matchService.deleteMatch(matchId);
+    // Fetch match first to get creatorId
+    final match = await _matchService.getMatchById(matchId);
+    await _matchService.deleteMatch(matchId);
+    if (match != null) {
+      await FirebaseFirestore.instance
+          .collection(FirestoreCollections.users)
+          .doc(match.creatorId)
+          .update({
+        'createdMatches': FieldValue.arrayRemove([matchId]),
+      });
+    }
   }
 
   /// Real-time stream of all open matches.
