@@ -29,18 +29,53 @@ class ChatProvider extends ChangeNotifier {
 
   Future<ChatModel> getOrCreateDirectChat(String otherUserId) async {
     if (_userId == null) throw Exception('Not logged in');
-    return await _chatService.createOrGetChat([_userId!, otherUserId]);
+    try {
+      final chat = await _chatService.createOrGetChat([_userId!, otherUserId]);
+      return chat;
+    } catch (e) {
+      debugPrint('Error getting chat: $e');
+      rethrow;
+    }
   }
 
   Future<ChatModel> createGroupChat(String name, List<String> memberIds) async {
     if (_userId == null) throw Exception('Not logged in');
-    final allIds = [_userId!, ...memberIds].toSet().toList();
-    return await _chatService.createOrGetChat(allIds, isGroup: true, groupName: name);
+    try {
+      final allIds = [_userId!, ...memberIds].toSet().toList();
+      final chat = await _chatService.createOrGetChat(allIds, isGroup: true, groupName: name);
+      return chat;
+    } catch (e) {
+      debugPrint('Error creating group chat: $e');
+      rethrow;
+    }
   }
 
   Future<void> sendMessage(String chatId, String text) async {
     if (_userId == null) return;
     await _chatService.sendMessage(chatId, _userId!, text);
+  }
+
+  Future<void> addMembers(String chatId, List<String> userIds) async {
+    await _chatService.addMembers(chatId, userIds);
+    notifyListeners();
+  }
+
+  Future<void> kickMember(String chatId, String userId) async {
+    await _chatService.removeMember(chatId, userId);
+    notifyListeners();
+  }
+
+  Future<void> leaveGroup(String chatId) async {
+    if (_userId == null) return;
+    await _chatService.leaveGroup(chatId, _userId!);
+    _chats.removeWhere((c) => c.id == chatId);
+    notifyListeners();
+  }
+
+  Future<void> deleteGroup(String chatId) async {
+    await _chatService.deleteGroup(chatId);
+    _chats.removeWhere((c) => c.id == chatId);
+    notifyListeners();
   }
 
   Stream<List<MessageModel>> getChatMessages(String chatId) {

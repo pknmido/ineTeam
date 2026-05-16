@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatModel {
   final String id;
+  final String creatorId;
   final List<String> participantIds;
   final bool isGroup;
   final String? groupName;
@@ -10,6 +11,7 @@ class ChatModel {
 
   const ChatModel({
     required this.id,
+    required this.creatorId,
     required this.participantIds,
     this.isGroup = false,
     this.groupName,
@@ -20,6 +22,7 @@ class ChatModel {
   factory ChatModel.fromMap(Map<String, dynamic> map, String id) {
     return ChatModel(
       id: id,
+      creatorId: map['creatorId'] ?? '',
       participantIds: List<String>.from(map['participantIds'] ?? []),
       isGroup: map['isGroup'] ?? false,
       groupName: map['groupName'],
@@ -30,6 +33,7 @@ class ChatModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'creatorId': creatorId,
       'participantIds': participantIds,
       'isGroup': isGroup,
       'groupName': groupName,

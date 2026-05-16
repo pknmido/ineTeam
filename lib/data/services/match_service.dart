@@ -69,13 +69,26 @@ class MatchService {
   /// Real-time stream of all open matches, ordered by date.
   Stream<List<MatchModel>> matchesStream() {
     return _matchesCollection
-        //.where('status', whereIn: ['open'])
         .orderBy('dateTime', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) =>
-                MatchModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-            .toList());
+        .map((snapshot) {
+          final now = DateTime.now();
+          return snapshot.docs
+              .map((doc) =>
+                  MatchModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+              .where((match) {
+                // Filter out completed matches
+                if (match.status == 'completed') return false;
+                
+                // Hide matches that have already started
+                if (match.dateTime.isBefore(now)) {
+                  return false;
+                }
+                
+                return true;
+              })
+              .toList();
+        });
   }
 
   /// Real-time stream of a single match for live updates.

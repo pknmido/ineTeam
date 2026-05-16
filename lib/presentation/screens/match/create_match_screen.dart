@@ -292,34 +292,43 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                   spacing: 10,
                   runSpacing: 10,
                   children: _availableTimes.map((time) {
+                    final now = DateTime.now();
                     final isSelected = _selectedTime.hour == time.hour &&
                         _selectedTime.minute == time.minute;
                     final isReserved = _reservedTimes.any(
                         (t) => t.hour == time.hour && t.minute == time.minute);
+                    
+                    // Check if time is in the past for today
+                    final isToday = _selectedDate.year == now.year && 
+                                   _selectedDate.month == now.month && 
+                                   _selectedDate.day == now.day;
+                    final isPast = isToday && (time.hour < now.hour || (time.hour == now.hour && time.minute <= now.minute));
+                    
+                    final isDisabled = isReserved || isPast;
 
                     return ChoiceChip(
-                      selected: isSelected && !isReserved,
+                      selected: isSelected && !isDisabled,
                       label: Text(
                         time.format(context),
                         style: TextStyle(
-                          decoration: isReserved
+                          decoration: isDisabled
                               ? TextDecoration.lineThrough
                               : null,
-                          color: isReserved
+                          color: isDisabled
                               ? theme.colorScheme.onSurface.withAlpha(100)
                               : (isSelected ? sportColor : theme.colorScheme.onSurface),
                           fontWeight: isSelected ? FontWeight.w600 : null,
                         ),
                       ),
                       selectedColor: sportColor.withAlpha(40),
-                      backgroundColor: isReserved
+                      backgroundColor: isDisabled
                           ? theme.colorScheme.onSurface.withAlpha(10)
                           : theme.colorScheme.surface,
                       side: BorderSide(
-                        color: isSelected ? sportColor.withAlpha(120) : theme.colorScheme.outline.withAlpha(60),
+                        color: isSelected && !isDisabled ? sportColor.withAlpha(120) : theme.colorScheme.outline.withAlpha(60),
                       ),
-                      onSelected: isReserved
-                          ? null // Disable selection if reserved
+                      onSelected: isDisabled
+                          ? null // Disable selection if reserved or past
                           : (_) {
                               setState(() {
                                 _selectedTime = time;

@@ -8,6 +8,7 @@ import '../../../features/chat/chat_provider.dart';
 import '../../../features/notifications/notification_provider.dart';
 import '../../../data/services/user_service.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/chat_model.dart';
 import '../../../core/utils/helpers.dart';
 import '../../widgets/player_avatar.dart';
 
@@ -205,20 +206,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  if (name.isEmpty || selectedFriends.isEmpty) {
-                    Helpers.showSnackBar(context, 'Enter name and select at least 1 friend', isError: true);
-                    return;
-                  }
-                  final chat = await context.read<ChatProvider>().createGroupChat(name, selectedFriends.toList());
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    context.push('/chat/${chat.id}');
-                  }
-                },
-                child: const Text('Create'),
+              _CreateGroupButton(
+                nameController: nameController,
+                selectedFriends: selectedFriends,
               ),
             ],
           );
@@ -231,10 +221,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
     final theme = Theme.of(context);
+    final groups = chatProvider.chats.where((c) => c.isGroup).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Friends & Chats'),
+        title: const Text('My Friends & Groups'),
         actions: [
           IconButton(
             icon: const Icon(Icons.group_add),
@@ -252,6 +243,15 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                if (groups.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Groups', style: theme.textTheme.titleLarge),
+                  ),
+                ...groups.map((chat) {
+                  return ChatTile(chat: chat, currentUserId: context.read<AuthProvider>().userId);
+                }),
+                
                 if (_friends.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -275,23 +275,95 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       ),
                       onTap: () => context.push('/user/${friend.uid}'),
                     )),
-                if (chatProvider.chats.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Recent Chats', style: theme.textTheme.titleLarge),
-                  ),
-                ...chatProvider.chats.map((chat) {
-                  return ListTile(
-                    leading: CircleAvatar(
-                      child: Icon(chat.isGroup ? Icons.group : Icons.chat),
-                    ),
-                    title: Text(chat.isGroup ? chat.groupName ?? 'Group' : 'Direct Chat'),
-                    subtitle: Text(chat.lastMessage),
-                    onTap: () => context.push('/chat/${chat.id}'),
-                  );
-                }),
               ],
             ),
+    );
+  }
+}
+
+class _CreateGroupButton extends StatefulWidget {
+  final TextEditingController nameController;
+  final Set<String> selectedFriends;
+
+  const _CreateGroupButton({
+    required this.nameController,
+    required this.selectedFriends,
+  });
+
+  @override
+  State<_CreateGroupButton> createState() => _CreateGroupButtonState();
+}
+
+class _CreateGroupButtonState extends State<_CreateGroupButton> {
+  bool _isCreating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: _isCreating ? null : () async {
+        final name = widget.nameController.text.trim();
+        if (name.isEmpty || widget.selectedFriends.isEmpty) {
+          Helpers.showSnackBar(context, 'Enter name and select at least 1 friend', isError: true);
+          return;
+        }
+
+        setState(() => _isCreating = true);
+        try {
+          final chat = await context.read<ChatProvider>().createGroupChat(name, widget.selectedFriends.toList());
+          if (context.mounted) {
+            Navigator.pop(context);
+            context.push('/chat/${chat.id}');
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() => _isCreating = false);
+            Helpers.showSnackBar(context, 'Error creating group: $e', isError: true);
+          }
+        }
+      },
+      child: _isCreating 
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+        : const Text('Create'),
+    );
+  }
+}
+
+class ChatTile extends StatelessWidget {
+  final ChatModel chat;
+  final String currentUserId;
+  final UserService _userService = UserService();
+
+  ChatTile({required this.chat, required this.currentUserId});
+
+  @override
+  Widget build(BuildContext context) {
+    if (chat.isGroup) {
+      return ListTile(
+        leading: CircleAvatar(child: const Icon(Icons.group)),
+        title: Text(chat.groupName ?? 'Group Chat'),
+        subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+        onTap: () => context.push('/chat/${chat.id}'),
+      );
+    }
+
+    // For direct chats, fetch the other person's name
+    final otherId = chat.participantIds.firstWhere((id) => id != currentUserId, orElse: () => '');
+    
+    return FutureBuilder<UserModel?>(
+      future: _userService.getUserProfile(otherId),
+      builder: (context, snapshot) {
+        final name = snapshot.data?.name ?? 'Chat';
+        return ListTile(
+          leading: PlayerAvatar(
+            name: name,
+            imageUrl: snapshot.data?.profilePictureUrl,
+            radius: 20,
+          ),
+          title: Text(name),
+          subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+          onTap: () => context.push('/chat/${chat.id}'),
+        );
+      },
     );
   }
 }

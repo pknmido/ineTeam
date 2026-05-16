@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../features/notifications/notification_provider.dart';
 import '../../../core/utils/helpers.dart';
 
@@ -39,6 +40,12 @@ class NotificationScreen extends StatelessWidget {
                     if (isUnread) {
                       notificationProvider.markAsRead(notification.id);
                     }
+                    if (notification.type == 'chat_message') {
+                      final chatId = notification.data['chatId'];
+                      if (chatId != null) {
+                        context.push('/chat/$chatId');
+                      }
+                    }
                   },
                 );
               },
@@ -61,11 +68,6 @@ class NotificationScreen extends StatelessWidget {
           ),
         ],
       );
-    } else if (notification.type == 'friend_accepted') {
-      return IconButton(
-        icon: const Icon(Icons.delete_outline),
-        onPressed: () => provider.deleteNotification(notification.id),
-      );
     } else {
       return IconButton(
         icon: const Icon(Icons.delete_outline),
@@ -84,6 +86,8 @@ class NotificationScreen extends StatelessWidget {
         return Icons.cancel_outlined;
       case 'match_reminder':
         return Icons.timer;
+      case 'chat_message':
+        return Icons.chat_bubble_outline;
       default:
         return Icons.notifications;
     }

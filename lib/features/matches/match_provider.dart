@@ -40,17 +40,26 @@ class MatchProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Returns matches filtered by the current sport filter and search query.
+  /// Returns matches filtered by the current sport filter, search query, and time.
   List<MatchModel> get filteredMatches {
     var filtered = List<MatchModel>.from(_matches);
+    final now = DateTime.now();
 
-    // Apply sport filter
+    // 1. Filter out completed or already started matches
+    filtered = filtered.where((m) {
+      if (m.status == 'completed') return false;
+      // Hide the minute it starts
+      if (m.dateTime.isBefore(now)) return false;
+      return true;
+    }).toList();
+
+    // 2. Apply sport filter
     if (_selectedSportFilter != null) {
       filtered =
           filtered.where((m) => m.sport == _selectedSportFilter).toList();
     }
 
-    // Apply search query
+    // 3. Apply search query
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((m) {
