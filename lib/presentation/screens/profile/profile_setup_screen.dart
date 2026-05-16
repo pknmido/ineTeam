@@ -25,6 +25,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   // Per-sport skill level: sport label -> 1-100
   final Map<String, double> _sportSkillLevels = {};
   String _frequency = 'casual';
+  int _notificationPrefMinutes = 30;
   bool _isSubmitting = false;
   String? _selectedAvatar;
 
@@ -41,6 +42,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       user.sportRatings.forEach((sport, rating) {
         _sportSkillLevels[sport] = rating.toDouble();
       });
+      _notificationPrefMinutes = user.notificationPrefMinutes;
     }
   }
 
@@ -76,6 +78,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       sportRatings: sportRatings,
       frequency: _frequency,
       profilePictureUrl: _selectedAvatar != null ? 'emoji:$_selectedAvatar' : null,
+      notificationPrefMinutes: _notificationPrefMinutes,
     );
 
     if (success && mounted) {
@@ -376,6 +379,41 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       ),
                     );
                   }),
+
+                  const SizedBox(height: 32),
+
+                  // ── Match Reminder ──
+                  Text(
+                    'Match Reminder',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Notify me before an upcoming match starts:',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withAlpha(150),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text('$_notificationPrefMinutes min', style: theme.textTheme.titleMedium),
+                      Expanded(
+                        child: Slider(
+                          value: _notificationPrefMinutes.toDouble(),
+                          min: 5,
+                          max: 120,
+                          divisions: 23,
+                          label: '$_notificationPrefMinutes min',
+                          onChanged: (val) {
+                            setState(() {
+                              _notificationPrefMinutes = val.toInt();
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 40),
 

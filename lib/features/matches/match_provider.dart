@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/models/match_model.dart';
+import '../../data/models/notification_model.dart';
 import '../../data/repositories/match_repository.dart';
+import '../../data/services/notification_service.dart';
+import '../../data/services/user_service.dart';
 import 'matchmaking_service.dart';
 
 /// Manages match state — listing, creation, joining, and filtering.
@@ -23,6 +26,8 @@ class MatchProvider extends ChangeNotifier {
   StreamSubscription<List<MatchModel>>? _matchesSub;
   StreamSubscription<List<MatchModel>>? _userMatchesSub;
   StreamSubscription<List<MatchModel>>? _createdMatchesSub;
+  Timer? _reminderTimer;
+  final Set<String> _remindedMatches = {};
 
   MatchProvider({MatchRepository? matchRepository})
       : _matchRepository = matchRepository ?? MatchRepository();
@@ -86,6 +91,39 @@ class MatchProvider extends ChangeNotifier {
         _matchRepository.createdMatchesStream(userId).listen((matches) {
       _createdMatches = matches;
       notifyListeners();
+    });
+
+    _startReminderTimer(userId);
+  }
+
+  void _startReminderTimer(String userId) {
+    _reminderTimer?.cancel();
+    _reminderTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+      final userService = UserService();
+      final userProfile = await userService.getUserProfile(userId);
+      if (userProfile == null) return;
+
+      final prefs = userProfile.notificationPrefMinutes;
+      final now = DateTime.now();
+
+      final upcoming = [..._userMatches, ..._createdMatches]
+          .where((m) => m.dateTime.isAfter(now));
+
+      for (final match in upcoming) {
+        if (_remindedMatches.contains(match.id)) continue;
+        final diff = match.dateTime.difference(now).inMinutes;
+        if (diff <= prefs && diff > 0) {
+          _remindedMatches.add(match.id);
+          await NotificationService().sendNotification(NotificationModel(
+            id: const Uuid().v4(),
+            userId: userId,
+            title: 'Match Starting Soon',
+            body: 'Your ${match.sport} match starts in $diff minutes!',
+            type: 'match_reminder',
+            createdAt: now,
+          ));
+        }
+      }
     });
   }
 
@@ -216,6 +254,32 @@ class MatchProvider extends ChangeNotifier {
   _errorMessage = null;
 
   try {
+    MatchModel? matchToDelete;
+    final allKnown = {..._matches, ..._createdMatches, ..._userMatches};
+    for (final m in allKnown) {
+      if (m.id == matchId) {
+        matchToDelete = m;
+        break;
+      }
+    }
+
+    if (matchToDelete != null) {
+      final notifService = NotificationService();
+      final participants = [...matchToDelete.teamA, ...matchToDelete.teamB];
+      for (final p in participants) {
+        if (p != matchToDelete.creatorId) {
+          await notifService.sendNotification(NotificationModel(
+            id: const Uuid().v4(),
+            userId: p,
+            title: 'Match Cancelled',
+            body: 'A ${matchToDelete.sport} match you joined has been deleted by the creator.',
+            type: 'match_deleted',
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+    }
+
     await _matchRepository.deleteMatch(matchId);
 
     // Instant UI update
@@ -307,6 +371,7 @@ class MatchProvider extends ChangeNotifier {
     _matchesSub?.cancel();
     _userMatchesSub?.cancel();
     _createdMatchesSub?.cancel();
+    _reminderTimer?.cancel();
     super.dispose();
   }
 }

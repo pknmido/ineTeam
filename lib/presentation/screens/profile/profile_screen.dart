@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../features/auth/auth_provider.dart';
+import '../../../features/notifications/notification_provider.dart';
 
 import '../../widgets/player_avatar.dart';
 import '../../widgets/skill_indicator.dart';
@@ -17,6 +18,7 @@ class ProfileScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
     final profile = auth.userProfile;
+    final notifications = context.watch<NotificationProvider>();
 
     if (profile == null) {
       return Scaffold(
@@ -29,6 +31,41 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
+          // Notifications
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () => context.push('/notifications'),
+              ),
+              if (notifications.unreadCount > 0)
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 12,
+                      minHeight: 12,
+                    ),
+                    child: Text(
+                      '${notifications.unreadCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           // Dark mode toggle
           IconButton(
             icon: Icon(
@@ -227,6 +264,24 @@ class ProfileScreen extends StatelessWidget {
                   'Joined',
                 ),
               ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Friends Button ──
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/friends'),
+                icon: const Icon(Icons.people_alt_outlined),
+                label: const Text('My Friends'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary.withAlpha(20),
+                  foregroundColor: theme.colorScheme.primary,
+                  elevation: 0,
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),

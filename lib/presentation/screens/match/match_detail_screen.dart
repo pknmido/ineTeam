@@ -487,6 +487,7 @@ class MatchDetailScreen extends StatelessWidget {
                     size: 36,
                     showLabel: false,
                   ),
+                  onTap: () => context.push('/user/${player.uid}'),
                 )),
         ],
       ),

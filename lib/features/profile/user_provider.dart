@@ -39,6 +39,7 @@ class UserProvider extends ChangeNotifier {
     Map<String, int>? sportRatings,
     String? frequency,
     String? profilePictureUrl,
+    int? notificationPrefMinutes,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -52,6 +53,7 @@ class UserProvider extends ChangeNotifier {
       if (sportRatings != null) data['sportRatings'] = sportRatings;
       if (frequency != null) data['frequency'] = frequency;
       if (profilePictureUrl != null) data['profilePictureUrl'] = profilePictureUrl;
+      if (notificationPrefMinutes != null) data['notificationPrefMinutes'] = notificationPrefMinutes;
 
       await _userService.updateUserProfile(uid, data);
       _isLoading = false;

@@ -13,6 +13,10 @@ class UserModel {
   final List<String> createdMatches;
   final List<String> joinedMatches;
   final DateTime createdAt;
+  final int notificationPrefMinutes;
+  final List<String> friends;
+  final List<String> friendRequests;
+  final List<String> sentFriendRequests;
 
   const UserModel({
     required this.uid,
@@ -26,6 +30,10 @@ class UserModel {
     this.createdMatches = const [],
     this.joinedMatches = const [],
     required this.createdAt,
+    this.notificationPrefMinutes = 30,
+    this.friends = const [],
+    this.friendRequests = const [],
+    this.sentFriendRequests = const [],
   });
 
   /// Creates a UserModel from a Firestore document map.
@@ -60,6 +68,10 @@ class UserModel {
       createdMatches: List<String>.from(map['createdMatches'] ?? []),
       joinedMatches: List<String>.from(map['joinedMatches'] ?? []),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      notificationPrefMinutes: map['notificationPrefMinutes'] ?? 30,
+      friends: List<String>.from(map['friends'] ?? []),
+      friendRequests: List<String>.from(map['friendRequests'] ?? []),
+      sentFriendRequests: List<String>.from(map['sentFriendRequests'] ?? []),
     );
   }
 
@@ -76,6 +88,10 @@ class UserModel {
       'createdMatches': createdMatches,
       'joinedMatches': joinedMatches,
       'createdAt': Timestamp.fromDate(createdAt),
+      'notificationPrefMinutes': notificationPrefMinutes,
+      'friends': friends,
+      'friendRequests': friendRequests,
+      'sentFriendRequests': sentFriendRequests,
     };
   }
 
@@ -90,6 +106,10 @@ class UserModel {
     String? frequency,
     List<String>? createdMatches,
     List<String>? joinedMatches,
+    int? notificationPrefMinutes,
+    List<String>? friends,
+    List<String>? friendRequests,
+    List<String>? sentFriendRequests,
   }) {
     return UserModel(
       uid: uid,
@@ -103,6 +123,10 @@ class UserModel {
       createdMatches: createdMatches ?? this.createdMatches,
       joinedMatches: joinedMatches ?? this.joinedMatches,
       createdAt: createdAt,
+      notificationPrefMinutes: notificationPrefMinutes ?? this.notificationPrefMinutes,
+      friends: friends ?? this.friends,
+      friendRequests: friendRequests ?? this.friendRequests,
+      sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
     );
   }
 

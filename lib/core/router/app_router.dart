@@ -12,6 +12,10 @@ import '../../presentation/screens/match/match_detail_screen.dart';
 import '../../presentation/screens/match/create_match_screen.dart';
 import '../../presentation/screens/match/my_matches_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/notifications/notification_screen.dart';
+import '../../presentation/screens/friends/friends_screen.dart';
+import '../../presentation/screens/friends/chat_screen.dart';
+import '../../presentation/screens/profile/user_detail_screen.dart';
 
 /// Application router configuration using GoRouter.
 class AppRouter {
@@ -53,8 +57,7 @@ class AppRouter {
 
         // Authenticated + has profile, but on auth pages → go to My Matches natively
         if (currentPath == '/login' ||
-            currentPath == '/signup' ||
-            currentPath == '/profile-setup') {
+            currentPath == '/signup') {
           return '/my-matches';
         }
 
@@ -114,6 +117,28 @@ class AppRouter {
         GoRoute(
           path: '/create-match',
           builder: (context, state) => const CreateMatchScreen(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationScreen(),
+        ),
+        GoRoute(
+          path: '/friends',
+          builder: (context, state) => const FriendsScreen(),
+        ),
+        GoRoute(
+          path: '/chat/:chatId',
+          builder: (context, state) {
+            final chatId = state.pathParameters['chatId']!;
+            return ChatScreen(chatId: chatId);
+          },
+        ),
+        GoRoute(
+          path: '/user/:userId',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId']!;
+            return UserDetailScreen(userId: userId);
+          },
         ),
       ],
     );

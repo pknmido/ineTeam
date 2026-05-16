@@ -7,6 +7,8 @@ import 'core/router/app_router.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/profile/user_provider.dart';
 import 'features/matches/match_provider.dart';
+import 'features/notifications/notification_provider.dart';
+import 'features/chat/chat_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +44,16 @@ class IneTeamApp extends StatelessWidget {
         ChangeNotifierProvider<MatchProvider>(
           create: (_) => MatchProvider(),
         ),
+
+        // Notification provider
+        ChangeNotifierProvider<NotificationProvider>(
+          create: (_) => NotificationProvider(),
+        ),
+
+        // Chat provider
+        ChangeNotifierProvider<ChatProvider>(
+          create: (_) => ChatProvider(),
+        ),
       ],
       child: const _AppWithTheme(),
     );
@@ -71,6 +83,11 @@ class _AppWithThemeState extends State<_AppWithTheme> {
       // Load user profile and match streams once authenticated
       context.read<UserProvider>().loadProfile(auth.userId);
       context.read<MatchProvider>().initStreams(auth.userId);
+      context.read<NotificationProvider>().initialize(auth.userId);
+      context.read<ChatProvider>().initialize(auth.userId);
+    } else {
+      context.read<NotificationProvider>().initialize(null);
+      context.read<ChatProvider>().initialize(null);
     }
   }
 
