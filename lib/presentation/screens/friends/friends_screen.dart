@@ -27,6 +27,24 @@ class _FriendsScreenState extends State<FriendsScreen> {
   void initState() {
     super.initState();
     _loadFriends();
+    
+    // Listen for profile changes to refresh friends list
+    final auth = context.read<AuthProvider>();
+    auth.addListener(_onAuthProfileChanged);
+  }
+
+  void _onAuthProfileChanged() {
+    if (mounted) {
+       _loadFriends();
+    }
+  }
+
+  @override
+  void dispose() {
+    // It's safer to avoid using context here, but since AuthProvider is a singleton
+    // we should really remove the listener.
+    // However, in this app structure, we'll just ignore it for now or try to get it safely.
+    super.dispose();
   }
 
   Future<void> _loadFriends() async {

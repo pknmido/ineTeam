@@ -244,29 +244,73 @@ class UserDetailScreen extends StatelessWidget {
   void _showRemoveFriendConfirmation(BuildContext context, UserModel profile) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Friend?'),
-        content: Text('Are you sure you want to remove ${profile.name} from your friends?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final authId = Provider.of<AuthProvider>(context, listen: false).userId;
-              if (authId != null) {
-                await _userService.unfriend(authId, profile.uid);
+      builder: (context) => _UnfriendDialog(
+        profile: profile,
+        userService: _userService,
+      ),
+    );
+  }
+}
+
+class _UnfriendDialog extends StatefulWidget {
+  final UserModel profile;
+  final UserService userService;
+
+  const _UnfriendDialog({required this.profile, required this.userService});
+
+  @override
+  State<_UnfriendDialog> createState() => _UnfriendDialogState();
+}
+
+class _UnfriendDialogState extends State<_UnfriendDialog> {
+  bool _isRemoving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Remove Friend?'),
+      content: Text('Are you sure you want to remove ${widget.profile.name} from your friends?'),
+      actions: [
+        TextButton(
+          onPressed: _isRemoving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _isRemoving ? null : () async {
+            setState(() => _isRemoving = true);
+            final authId = Provider.of<AuthProvider>(context, listen: false).userId;
+            if (authId != null) {
+              try {
+                await widget.userService.unfriend(authId, widget.profile.uid);
+                
+                // Send silent sync notification
+                if (context.mounted) {
+                  context.read<NotificationProvider>().sendNotification(
+                    userId: widget.profile.uid,
+                    title: 'Sync',
+                    body: 'Sync',
+                    type: 'friend_removed',
+                    data: {'unfrienderId': authId},
+                  );
+                }
+
                 if (context.mounted) {
                   Navigator.pop(context);
-                  Helpers.showSnackBar(context, 'Removed ${profile.name} from friends.');
+                  Helpers.showSnackBar(context, 'Removed ${widget.profile.name} from friends.');
+                }
+              } catch (e) {
+                if (mounted) {
+                  setState(() => _isRemoving = false);
+                  Helpers.showSnackBar(context, 'Error removing friend.', isError: true);
                 }
               }
-            },
-            child: Text('Remove', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        ],
-      ),
+            }
+          },
+          child: _isRemoving 
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text('Remove', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ),
+      ],
     );
   }
 }

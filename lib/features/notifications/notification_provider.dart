@@ -43,11 +43,19 @@ class NotificationProvider extends ChangeNotifier {
               // Auto-handle 'friend_accepted' to make it bi-directional automatically
               if (notification.type == 'friend_accepted') {
                 handleFriendAccepted(notification.data['friendId']);
-                // We keep it in the list so user sees the message, but mark as read
-                markAsRead(notification.id);
+                deleteNotification(notification.id); // DELETE after sync
+                return; // Skip local notification
+              }
+
+              // Auto-handle 'friend_removed' to sync unfriending (SILENTLY)
+              if (notification.type == 'friend_removed') {
+                handleFriendRemoved(notification.data['unfrienderId']);
+                deleteNotification(notification.id); // DELETE after sync
+                return; // Skip local notification
               }
               
               _showLocalNotification(notification.title, notification.body);
+              
               _seenNotificationIds.add(notification.id);
             }
           }
@@ -138,6 +146,21 @@ class NotificationProvider extends ChangeNotifier {
       await _userService.updateUserProfile(_userId!, {
         'friends': updatedFriends,
         'sentFriendRequests': FieldValue.arrayRemove([friendId]),
+      });
+    }
+  }
+
+  Future<void> handleFriendRemoved(String friendId) async {
+    if (_userId == null) return;
+    
+    // Update current user's friends list (allowed)
+    final currentUser = await _userService.getUserProfile(_userId!);
+    if (currentUser != null) {
+      final updatedFriends = List<String>.from(currentUser.friends);
+      updatedFriends.remove(friendId);
+      
+      await _userService.updateUserProfile(_userId!, {
+        'friends': updatedFriends,
       });
     }
   }
