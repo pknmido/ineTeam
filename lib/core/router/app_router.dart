@@ -24,10 +24,12 @@ class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+  static GoRouter? _router;
+
   static GoRouter router(AuthProvider authProvider) {
-    return GoRouter(
+    _router ??= GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/splash',
+      initialLocation: '/',
       refreshListenable: authProvider,
       redirect: (context, state) {
         final isAuthenticated = authProvider.isAuthenticated;
@@ -36,7 +38,7 @@ class AppRouter {
         final currentPath = state.matchedLocation;
 
         // Allow splash screen always
-        if (currentPath == '/splash') return null;
+        if (currentPath == '/') return null;
 
         // Not authenticated → go to login
         if (!isAuthenticated) {
@@ -64,9 +66,9 @@ class AppRouter {
         return null;
       },
       routes: [
-        // Splash
+        // Splash (Root)
         GoRoute(
-          path: '/splash',
+          path: '/',
           builder: (context, state) => const SplashScreen(),
         ),
 
@@ -142,5 +144,6 @@ class AppRouter {
         ),
       ],
     );
+    return _router!;
   }
 }
