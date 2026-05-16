@@ -41,4 +41,10 @@ class NotificationService {
         .doc(notificationId)
         .delete();
   }
+
+  Future<void> updateFcmToken(String userId, String token) async {
+    await _firestore.collection('users').doc(userId).set({
+      'fcmToken': token,
+    }, SetOptions(merge: true));
+  }
 }

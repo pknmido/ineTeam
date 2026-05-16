@@ -34,34 +34,7 @@ class NotificationScreen extends StatelessWidget {
                     style: TextStyle(fontWeight: isUnread ? FontWeight.bold : FontWeight.normal),
                   ),
                   subtitle: Text(notification.body),
-                  trailing: notification.type == 'friend_request'
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.check, color: Colors.green),
-                              onPressed: () {
-                                notificationProvider.acceptFriendRequest(
-                                  notification.id,
-                                  notification.data['requesterId'],
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () {
-                                notificationProvider.declineFriendRequest(
-                                  notification.id,
-                                  notification.data['requesterId'],
-                                );
-                              },
-                            ),
-                          ],
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => notificationProvider.deleteNotification(notification.id),
-                        ),
+                  trailing: _getTrailingForType(context, notification, notificationProvider),
                   onTap: () {
                     if (isUnread) {
                       notificationProvider.markAsRead(notification.id);
@@ -73,10 +46,43 @@ class NotificationScreen extends StatelessWidget {
     );
   }
 
+  Widget _getTrailingForType(BuildContext context, dynamic notification, NotificationProvider provider) {
+    if (notification.type == 'friend_request') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.green),
+            onPressed: () => provider.acceptFriendRequest(notification.id, notification.data['requesterId']),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.red),
+            onPressed: () => provider.declineFriendRequest(notification.id, notification.data['requesterId']),
+          ),
+        ],
+      );
+    } else if (notification.type == 'friend_accepted') {
+      return TextButton(
+        onPressed: () {
+          provider.handleFriendAccepted(notification.data['friendId']);
+          provider.deleteNotification(notification.id);
+        },
+        child: const Text('Add to List'),
+      );
+    } else {
+      return IconButton(
+        icon: const Icon(Icons.delete_outline),
+        onPressed: () => provider.deleteNotification(notification.id),
+      );
+    }
+  }
+
   IconData _getIconForType(String type) {
     switch (type) {
       case 'friend_request':
         return Icons.person_add;
+      case 'friend_accepted':
+        return Icons.person_add_alt_1;
       case 'match_deleted':
         return Icons.cancel_outlined;
       case 'match_reminder':

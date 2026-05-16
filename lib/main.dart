@@ -9,12 +9,20 @@ import 'features/profile/user_provider.dart';
 import 'features/matches/match_provider.dart';
 import 'features/notifications/notification_provider.dart';
 import 'features/chat/chat_provider.dart';
+import 'core/theme/theme_provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const IneTeamApp());
 }
 
@@ -25,9 +33,9 @@ class IneTeamApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Theme mode notifier for dark/light toggle
-        ChangeNotifierProvider<ValueNotifier<ThemeMode>>(
-          create: (_) => ValueNotifier<ThemeMode>(ThemeMode.light),
+        // Theme provider for persistent dark/light toggle
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider(),
         ),
 
         // Auth provider — manages login/signup state
@@ -94,7 +102,8 @@ class _AppWithThemeState extends State<_AppWithTheme> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final themeMode = context.watch<ValueNotifier<ThemeMode>>().value;
+    final themeProvider = context.watch<ThemeProvider>();
+    final themeMode = themeProvider.themeMode;
     final router = AppRouter.router(authProvider);
 
     return MaterialApp.router(

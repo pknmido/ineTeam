@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/notifications/notification_provider.dart';
+import '../../../core/theme/theme_provider.dart';
 
 import '../../widgets/player_avatar.dart';
 import '../../widgets/skill_indicator.dart';
@@ -74,12 +75,9 @@ class ProfileScreen extends StatelessWidget {
                   : Icons.dark_mode,
             ),
             onPressed: () {
-              // Toggle is handled by ThemeProvider in main.dart
-              final themeNotifier =
-                  context.read<ValueNotifier<ThemeMode>>();
-              themeNotifier.value = themeNotifier.value == ThemeMode.dark
-                  ? ThemeMode.light
-                  : ThemeMode.dark;
+              // Toggle is handled by ThemeProvider
+              final brightness = MediaQuery.of(context).platformBrightness;
+              context.read<ThemeProvider>().toggleTheme(brightness);
             },
           ),
           // Edit Profile Button

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../features/auth/auth_provider.dart';
 import '../../../features/matches/match_provider.dart';
 import '../../widgets/match_card.dart';
 import '../../widgets/sport_chip.dart';
@@ -130,7 +131,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 : RefreshIndicator(
                     onRefresh: () async {
-                      // Streams auto-refresh, but we provide the gesture
+                      final userId = context.read<AuthProvider>().userId;
+                      if (userId.isNotEmpty) {
+                        context.read<MatchProvider>().initStreams(userId);
+                      }
                       await Future.delayed(const Duration(milliseconds: 500));
                     },
                     child: ListView.builder(

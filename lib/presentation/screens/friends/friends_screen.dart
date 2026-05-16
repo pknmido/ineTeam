@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../features/auth/auth_provider.dart';
@@ -65,31 +66,31 @@ class _FriendsScreenState extends State<FriendsScreen> {
               final query = controller.text.trim();
               if (query.isEmpty) return;
 
-              final allUsersQuery = await _userService.userProfileStream(query).first; // This won't work well if query is email/username. We need to query by name or email.
-              
-              // To properly query by name/email, we need a method in UserService. Since we don't want to change much, let's just use firestore directly here or add a method.
               try {
-                final snapshot = await _userService.usersCollection
+                // Try email first
+                var snapshot = await _userService.usersCollection
                     .where('email', isEqualTo: query)
                     .get();
                 
+                // Try name if email fails
                 if (snapshot.docs.isEmpty) {
-                  final nameSnapshot = await _userService.usersCollection
+                  snapshot = await _userService.usersCollection
                       .where('name', isEqualTo: query)
                       .get();
-                  if (nameSnapshot.docs.isEmpty) {
-                    if (context.mounted) {
-                      Helpers.showSnackBar(context, 'No user found.', isError: true);
-                    }
-                    return;
-                  }
-                  _sendRequest(nameSnapshot.docs.first.id);
-                } else {
-                  _sendRequest(snapshot.docs.first.id);
                 }
+
+                if (snapshot.docs.isEmpty) {
+                  if (context.mounted) {
+                    Helpers.showSnackBar(context, 'No user found with that email or username.', isError: true);
+                  }
+                  return;
+                }
+
+                final targetId = snapshot.docs.first.id;
+                _sendRequest(targetId);
               } catch (e) {
                  if (context.mounted) {
-                    Helpers.showSnackBar(context, 'Error finding user.', isError: true);
+                    Helpers.showSnackBar(context, 'Error finding user: $e', isError: true);
                  }
               }
             },
@@ -113,10 +114,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
       return;
     }
     
-    // Add targetId to sent requests
+    // Add targetId to sent requests of current user (allowed)
     await _userService.updateUserProfile(authId, {
-      'sentFriendRequests': [...currentUser.sentFriendRequests, targetId],
+      'sentFriendRequests': FieldValue.arrayUnion([targetId]),
     });
+
+    // NOTE: We cannot update the target user's document directly due to security rules.
+    // Instead, we send a notification. When they accept, they will update their own document.
 
     // Send notification
     await context.read<NotificationProvider>().sendNotification(

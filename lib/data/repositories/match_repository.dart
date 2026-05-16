@@ -87,14 +87,19 @@ class MatchRepository {
   Future<void> deleteMatch(String matchId) async {
     // Fetch match first to get creatorId
     final match = await _matchService.getMatchById(matchId);
-    await _matchService.deleteMatch(matchId);
     if (match != null) {
+      // Remove from creator's createdMatches (this is allowed as creator owns their doc)
       await FirebaseFirestore.instance
           .collection(FirestoreCollections.users)
           .doc(match.creatorId)
           .update({
         'createdMatches': FieldValue.arrayRemove([matchId]),
       });
+      
+      // Delete the match document (allowed if creator owns it)
+      await _matchService.deleteMatch(matchId);
+    } else {
+      await _matchService.deleteMatch(matchId);
     }
   }
 

@@ -28,6 +28,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   int _notificationPrefMinutes = 30;
   bool _isSubmitting = false;
   String? _selectedAvatar;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         _sportSkillLevels[sport] = rating.toDouble();
       });
       _notificationPrefMinutes = user.notificationPrefMinutes;
+      _isEditing = user.hasCompletedProfile;
     }
   }
 
@@ -82,7 +84,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
 
     if (success && mounted) {
-      context.go('/home');
+      if (_isEditing) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
     } else if (mounted) {
       Helpers.showSnackBar(context, 'Failed to save profile', isError: true);
     }
@@ -440,6 +446,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
             ),
           ),
+          if (_isEditing)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.close, size: 28),
+                  onPressed: () => context.pop(),
+                  style: IconButton.styleFrom(
+                    backgroundColor: theme.colorScheme.surface.withAlpha(200),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
