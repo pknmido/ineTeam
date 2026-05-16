@@ -28,39 +28,39 @@ class NotificationProvider extends ChangeNotifier {
   final Set<String> _seenNotificationIds = {};
   bool _isFirstLoad = true;
 
-  void initialize(String? userId) {
+  Future<void> initialize(String? userId) async {
     if (userId == _userId) return;
     _userId = userId;
     _sub?.cancel();
     _isFirstLoad = true;
     _notifications = [];
-    
+
     if (userId != null) {
+      // 1. Await push notification channels configuration first
+      await _setupPushNotifications(userId);
+
+      // 2. Safely initialize Firestore stream listener
       _sub = _notificationService.getUserNotifications(userId).listen((data) {
         if (!_isFirstLoad) {
           for (final notification in data) {
             if (!notification.isRead && !_seenNotificationIds.contains(notification.id)) {
-              // Auto-handle 'friend_accepted' to make it bi-directional automatically
               if (notification.type == 'friend_accepted') {
                 handleFriendAccepted(notification.data['friendId']);
-                deleteNotification(notification.id); // DELETE after sync
-                return; // Skip local notification
+                deleteNotification(notification.id);
+                return;
               }
 
-              // Auto-handle 'friend_removed' to sync unfriending (SILENTLY)
               if (notification.type == 'friend_removed') {
                 handleFriendRemoved(notification.data['unfrienderId']);
-                deleteNotification(notification.id); // DELETE after sync
-                return; // Skip local notification
+                deleteNotification(notification.id);
+                return;
               }
-              
+
               _showLocalNotification(notification.title, notification.body);
-              
               _seenNotificationIds.add(notification.id);
             }
           }
         } else {
-          // Record existing notification IDs so we don't alert for them
           for (final n in data) {
             _seenNotificationIds.add(n.id);
           }
@@ -69,7 +69,6 @@ class NotificationProvider extends ChangeNotifier {
         _notifications = data;
         notifyListeners();
       });
-      _setupPushNotifications(userId);
     } else {
       notifyListeners();
     }
@@ -106,20 +105,18 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> acceptFriendRequest(String notificationId, String requesterId) async {
     if (_userId == null) return;
-    
-    // 1. Update current user's friends list (allowed)
+
     final currentUser = await _userService.getUserProfile(_userId!);
     if (currentUser != null) {
       final updatedFriends = List<String>.from(currentUser.friends);
       if (!updatedFriends.contains(requesterId)) {
         updatedFriends.add(requesterId);
       }
-      
+
       await _userService.updateUserProfile(_userId!, {
         'friends': updatedFriends,
       });
-      
-      // 2. Send 'Acceptance' notification back to requester
+
       await sendNotification(
         userId: requesterId,
         title: 'Friend Request Accepted',
@@ -134,15 +131,14 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> handleFriendAccepted(String friendId) async {
     if (_userId == null) return;
-    
-    // Update current user's friends list (allowed)
+
     final currentUser = await _userService.getUserProfile(_userId!);
     if (currentUser != null) {
       final updatedFriends = List<String>.from(currentUser.friends);
       if (!updatedFriends.contains(friendId)) {
         updatedFriends.add(friendId);
       }
-      
+
       await _userService.updateUserProfile(_userId!, {
         'friends': updatedFriends,
         'sentFriendRequests': FieldValue.arrayRemove([friendId]),
@@ -152,13 +148,12 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> handleFriendRemoved(String friendId) async {
     if (_userId == null) return;
-    
-    // Update current user's friends list (allowed)
+
     final currentUser = await _userService.getUserProfile(_userId!);
     if (currentUser != null) {
       final updatedFriends = List<String>.from(currentUser.friends);
       updatedFriends.remove(friendId);
-      
+
       await _userService.updateUserProfile(_userId!, {
         'friends': updatedFriends,
       });
@@ -184,7 +179,7 @@ class NotificationProvider extends ChangeNotifier {
       badge: true,
       sound: true,
     );
-    
+
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       if (!kIsWeb) {
         await Permission.notification.request();
@@ -193,65 +188,63 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> _setupPushNotifications(String userId) async {
-    // 1. Request permissions (now more robust)
     await requestPermission();
 
-    // 2. Get FCM token
     String? token = await _messaging.getToken();
     if (token != null) {
       await _notificationService.updateFcmToken(userId, token);
     }
 
-    // 3. Setup local notifications for foreground (Non-Web only)
     if (!kIsWeb) {
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
-      const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
       const InitializationSettings initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
         iOS: initializationSettingsIOS,
       );
-      await (_localNotifications as dynamic).initialize(initializationSettings);
-    }
 
-      // 4. Listen for foreground messages
+      // FIXED: Added mandatory onDidReceiveNotificationResponse callback required by v21.0.0
+      await _localNotifications.initialize(
+        settings: initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          // Add your navigation or click-routing rules here if needed
+        },
+      );
+
+      // Force Apple foreground popups
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        if (kIsWeb) return; // Local notifications not supported on web
-        
         RemoteNotification? notification = message.notification;
         if (notification != null) {
-          (_localNotifications as dynamic).show(
-            notification.hashCode,
-            notification.title,
-            notification.body,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'high_importance_channel',
-                'High Importance Notifications',
-                importance: Importance.max,
-                priority: Priority.high,
-                icon: '@mipmap/ic_launcher',
-              ),
-              iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-              ),
-            ),
-          );
+          _showLocalNotification(notification.title, notification.body);
         }
       });
     }
-  
-  Future<void> _showLocalNotification(String title, String body) async {
+  }
+
+  // FIXED: Corrected parameter typing, removed invalid arguments, dropped risky dynamic casts
+  Future<void> _showLocalNotification(String? title, String? body) async {
     if (kIsWeb) return;
-    
-    const notificationDetails = NotificationDetails(
+
+    const NotificationDetails notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'high_importance_channel',
         'High Importance Notifications',
+        channelDescription: 'This channel is used for important notifications.',
         importance: Importance.max,
         priority: Priority.high,
+        playSound: true,
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
@@ -260,11 +253,11 @@ class NotificationProvider extends ChangeNotifier {
       ),
     );
 
-    await (_localNotifications as dynamic).show(
-      DateTime.now().millisecond,
-      title,
-      body,
-      notificationDetails,
+    await _localNotifications.show(
+      id: DateTime.now().millisecond,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
     );
   }
 

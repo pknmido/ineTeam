@@ -62,11 +62,11 @@ void main() async {
       // If `onMessage` is triggered with a notification, construct our own local notification
       // to show it while the app is in the foreground.
       if (notification != null && android != null && !kIsWeb) {
-        (flutterLocalNotificationsPlugin as dynamic).show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          NotificationDetails(
+        flutterLocalNotificationsPlugin.show(
+          id: notification.hashCode,
+          title: notification.title,
+          body: notification.body,
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               channel.id,
               channel.name,
