@@ -21,6 +21,34 @@ late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  
+  // If the message contains data but no notification, we might want to show a local notification
+  // to ensure a popup appears. If it has a notification block, the OS handles it.
+  if (message.data.isNotEmpty && message.notification == null) {
+    final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
+    
+    // Initialize for the background isolate
+    const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initSettings = InitializationSettings(android: androidInit);
+    await localNotifications.initialize(settings: initSettings);
+    
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+
+    await localNotifications.show(
+      id: message.data.hashCode,
+      title: message.data['title'] ?? 'New Notification',
+      body: message.data['body'] ?? 'You have a new message',
+      notificationDetails: details,
+    );
+  }
 }
 
 void main() async {
@@ -54,32 +82,6 @@ void main() async {
       badge: true,
       sound: true,
     );
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-
-      // If `onMessage` is triggered with a notification, construct our own local notification
-      // to show it while the app is in the foreground.
-      if (notification != null && android != null && !kIsWeb) {
-        flutterLocalNotificationsPlugin.show(
-          id: notification.hashCode,
-          title: notification.title,
-          body: notification.body,
-          notificationDetails: NotificationDetails(
-            android: AndroidNotificationDetails(
-              channel.id,
-              channel.name,
-              channelDescription: channel.description,
-              icon: android.smallIcon,
-              importance: Importance.max,
-              priority: Priority.high,
-              ticker: 'ticker',
-            ),
-          ),
-        );
-      }
-    });
   }
 
   runApp(const IneTeamApp());

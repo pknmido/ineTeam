@@ -17,6 +17,7 @@ class UserModel {
   final List<String> friends;
   final List<String> friendRequests;
   final List<String> sentFriendRequests;
+  final String? fcmToken;
 
   const UserModel({
     required this.uid,
@@ -34,6 +35,7 @@ class UserModel {
     this.friends = const [],
     this.friendRequests = const [],
     this.sentFriendRequests = const [],
+    this.fcmToken,
   });
 
   /// Creates a UserModel from a Firestore document map.
@@ -72,6 +74,7 @@ class UserModel {
       friends: List<String>.from(map['friends'] ?? []),
       friendRequests: List<String>.from(map['friendRequests'] ?? []),
       sentFriendRequests: List<String>.from(map['sentFriendRequests'] ?? []),
+      fcmToken: map['fcmToken'],
     );
   }
 
@@ -92,6 +95,7 @@ class UserModel {
       'friends': friends,
       'friendRequests': friendRequests,
       'sentFriendRequests': sentFriendRequests,
+      'fcmToken': fcmToken,
     };
   }
 
@@ -110,6 +114,7 @@ class UserModel {
     List<String>? friends,
     List<String>? friendRequests,
     List<String>? sentFriendRequests,
+    String? fcmToken,
   }) {
     return UserModel(
       uid: uid,
@@ -127,6 +132,7 @@ class UserModel {
       friends: friends ?? this.friends,
       friendRequests: friendRequests ?? this.friendRequests,
       sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 

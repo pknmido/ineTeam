@@ -36,10 +36,10 @@ class NotificationProvider extends ChangeNotifier {
     _notifications = [];
 
     if (userId != null) {
-      // 1. Await push notification channels configuration first
-      await _setupPushNotifications(userId);
+      // 1. Start push notification setup in parallel (don't block the stream)
+      _setupPushNotifications(userId);
 
-      // 2. Safely initialize Firestore stream listener
+      // 2. Initialize Firestore stream listener immediately
       _sub = _notificationService.getUserNotifications(userId).listen((data) {
         if (!_isFirstLoad) {
           for (final notification in data) {
@@ -227,7 +227,12 @@ class NotificationProvider extends ChangeNotifier {
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         RemoteNotification? notification = message.notification;
         if (notification != null) {
-          _showLocalNotification(notification.title, notification.body);
+          final String? id = message.data['notificationId'];
+          // Only show if we haven't already processed this notification ID from Firestore
+          if (id == null || !_seenNotificationIds.contains(id)) {
+            _showLocalNotification(notification.title, notification.body);
+            if (id != null) _seenNotificationIds.add(id);
+          }
         }
       });
     }
