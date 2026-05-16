@@ -104,6 +104,23 @@ class MatchProvider extends ChangeNotifier {
     int? maxSkill,
   }) async {
     _errorMessage = null;
+
+    final now = DateTime.now();
+    final upcomingCreated = _createdMatches.where((m) => m.dateTime.isAfter(now)).toList();
+    if (upcomingCreated.length >= 2) {
+      _errorMessage = 'You can only create up to 2 upcoming matches.';
+      notifyListeners();
+      return false;
+    }
+
+    final upcomingJoined = _userMatches.where((m) => m.dateTime.isAfter(now)).toList();
+    final hasClash = upcomingJoined.any((m) => m.dateTime.isAtSameMomentAs(dateTime));
+    if (hasClash) {
+      _errorMessage = 'You already have a match scheduled at this time.';
+      notifyListeners();
+      return false;
+    }
+
     try {
       final match = MatchModel(
         id: _uuid.v4(),
@@ -140,6 +157,34 @@ class MatchProvider extends ChangeNotifier {
   // ─── Join Match ──────────────────────────────────────────────────────────
   Future<bool> joinMatch(String matchId, String userId, String teamId) async {
     _errorMessage = null;
+
+    final now = DateTime.now();
+    final upcomingJoined = _userMatches.where((m) => m.dateTime.isAfter(now) && m.creatorId != userId).toList();
+    if (upcomingJoined.length >= 2) {
+      _errorMessage = 'You can only join up to 2 upcoming matches.';
+      notifyListeners();
+      return false;
+    }
+
+    MatchModel? targetMatch;
+    final allKnown = {..._matches, ..._createdMatches, ..._userMatches};
+    for (final m in allKnown) {
+      if (m.id == matchId) {
+        targetMatch = m;
+        break;
+      }
+    }
+
+    if (targetMatch != null) {
+      final allUpcoming = {..._createdMatches, ..._userMatches}.where((m) => m.dateTime.isAfter(now)).toList();
+      final hasClash = allUpcoming.any((m) => m.dateTime.isAtSameMomentAs(targetMatch!.dateTime));
+      if (hasClash) {
+        _errorMessage = 'You already have a match scheduled at this time.';
+        notifyListeners();
+        return false;
+      }
+    }
+
     try {
       await _matchRepository.joinMatch(matchId, userId, teamId);
       return true;

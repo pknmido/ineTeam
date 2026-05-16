@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/helpers.dart';
@@ -44,6 +45,13 @@ class ProfileScreen extends StatelessWidget {
                   : ThemeMode.dark;
             },
           ),
+          // Edit Profile Button
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              context.push('/profile-setup');
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -87,7 +95,7 @@ class ProfileScreen extends StatelessWidget {
               ...profile.sports.map((sport) {
                 final rating = profile.ratingForSport(sport);
                 final color = Helpers.sportColor(sport);
-                final skillColor = Helpers.skillColor(rating);
+                final skillColor = rating != null ? Helpers.skillColor(rating) : Colors.grey;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Container(
@@ -127,18 +135,19 @@ class ProfileScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '$rating/100',
+                              rating != null ? '$rating/100' : 'Unrated',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: skillColor,
                               ),
                             ),
-                            Text(
-                              Helpers.skillLabel(rating),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: skillColor.withAlpha(200),
+                            if (rating != null)
+                              Text(
+                                Helpers.skillLabel(rating),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: skillColor.withAlpha(200),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],
@@ -222,48 +231,7 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ── Sports Badges ──
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'My Sports',
-                style: theme.textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: profile.sports.map((sport) {
-                final color = Helpers.sportColor(sport);
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(25),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withAlpha(60)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Helpers.sportIcon(sport),
-                          size: 18, color: color),
-                      const SizedBox(width: 6),
-                      Text(
-                        sport,
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
 
-            const SizedBox(height: 16),
 
             // ── Frequency Badge ──
             Align(

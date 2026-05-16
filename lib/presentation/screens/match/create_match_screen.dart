@@ -307,13 +307,17 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                               : null,
                           color: isReserved
                               ? theme.colorScheme.onSurface.withAlpha(100)
-                              : null,
+                              : (isSelected ? sportColor : theme.colorScheme.onSurface),
+                          fontWeight: isSelected ? FontWeight.w600 : null,
                         ),
                       ),
                       selectedColor: sportColor.withAlpha(40),
                       backgroundColor: isReserved
                           ? theme.colorScheme.onSurface.withAlpha(10)
-                          : null,
+                          : theme.colorScheme.surface,
+                      side: BorderSide(
+                        color: isSelected ? sportColor.withAlpha(120) : theme.colorScheme.outline.withAlpha(60),
+                      ),
                       onSelected: isReserved
                           ? null // Disable selection if reserved
                           : (_) {

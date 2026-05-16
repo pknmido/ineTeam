@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/profile/user_provider.dart';
 
-/// Profile setup screen shown after first signup.
+/// Profile setup screen shown after first signup or when editing profile.
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -29,9 +27,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _frequency = 'casual';
   bool _isSubmitting = false;
   String? _selectedAvatar;
-  File? _imageFile;
-  bool _showDefaultAvatars = false;
-  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<UserProvider>().currentUser;
+    if (user != null) {
+      _selectedSports.addAll(user.sports);
+      _frequency = user.frequency;
+      if (user.profilePictureUrl != null && user.profilePictureUrl!.startsWith('emoji:')) {
+        _selectedAvatar = user.profilePictureUrl!.replaceFirst('emoji:', '');
+      }
+      user.sportRatings.forEach((sport, rating) {
+        _sportSkillLevels[sport] = rating.toDouble();
+      });
+    }
+  }
 
   double _skillForSport(String sport) => _sportSkillLevels[sport] ?? 50.0;
 
@@ -57,10 +68,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final avgSkill = (sportRatings.values.reduce((a, b) => a + b) /
             sportRatings.length)
         .round();
-
-    if (_imageFile != null) {
-      await userProvider.uploadProfilePicture(auth.userId, _imageFile!);
-    }
 
     final success = await userProvider.updateProfile(
       uid: auth.userId,
@@ -118,86 +125,44 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () async {
-                          final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                          if (image != null) {
-                            setState(() {
-                              _imageFile = File(image.path);
-                              _selectedAvatar = null;
-                            });
-                          }
-                        },
-                        child: CircleAvatar(
-                          radius: 36,
-                          backgroundColor: theme.colorScheme.primary.withAlpha(30),
-                          backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
-                          child: _imageFile == null
-                              ? Icon(Icons.camera_alt, color: theme.colorScheme.primary, size: 28)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _showDefaultAvatars = !_showDefaultAvatars;
-                            });
-                          },
-                          child: Text(_showDefaultAvatars ? 'Hide Default Avatars' : 'Choose Default Avatar'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_showDefaultAvatars) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 72,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _defaultAvatars.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final avatar = _defaultAvatars[index];
-                          final isSelected = _selectedAvatar == avatar;
-                          return GestureDetector(
-                            onTap: () => setState(() {
-                              _selectedAvatar = isSelected ? null : avatar;
-                              if (_selectedAvatar != null) {
-                                _imageFile = null;
-                              }
-                            }),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
+                  SizedBox(
+                    height: 72,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _defaultAvatars.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final avatar = _defaultAvatars[index];
+                        final isSelected = _selectedAvatar == avatar;
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedAvatar = isSelected ? null : avatar),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? theme.colorScheme.primary.withAlpha(30)
+                                  : theme.colorScheme.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(
                                 color: isSelected
-                                    ? theme.colorScheme.primary.withAlpha(30)
-                                    : theme.colorScheme.surface,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outline.withAlpha(40),
-                                  width: isSelected ? 2.5 : 1,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  avatar,
-                                  style: const TextStyle(fontSize: 28),
-                                ),
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.outline.withAlpha(40),
+                                width: isSelected ? 2.5 : 1,
                               ),
                             ),
-                          );
-                        },
-                      ),
+                            child: Center(
+                              child: Text(
+                                avatar,
+                                style: const TextStyle(fontSize: 28),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ],
+                  ),
 
                   const SizedBox(height: 36),
 

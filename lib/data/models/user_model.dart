@@ -109,6 +109,6 @@ class UserModel {
   /// Whether the user has completed their profile setup.
   bool get hasCompletedProfile => name.isNotEmpty && sports.isNotEmpty;
 
-  /// Returns the skill rating for a specific sport, falling back to skillLevel.
-  int ratingForSport(String sport) => sportRatings[sport] ?? skillLevel;
+  /// Returns the skill rating for a specific sport, or null if not set.
+  int? ratingForSport(String sport) => sportRatings[sport];
 }

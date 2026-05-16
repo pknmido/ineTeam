@@ -79,42 +79,11 @@ class MatchDetailScreen extends StatelessWidget {
                       }
                     }
 
-                    else if (val == 'complete') {
-                      final success = await matchProvider.updateMatchStatus(
-                        matchId,
-                        'completed',
-                      );
 
-                      if (!context.mounted) return;
-
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Match marked as completed')),
-                        );
-                        context.pop();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              matchProvider.errorMessage ?? 'Failed to update match',
-                            ),
-                          ),
-                        );
-                      }
-                    }
                   },
 
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'complete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle_outline, size: 20),
-                          SizedBox(width: 8),
-                          Text('Mark Completed'),
-                        ],
-                      ),
-                    ),
+
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -273,6 +242,7 @@ class MatchDetailScreen extends StatelessWidget {
                           players: teamAPlayers,
                           maxLimit: maxPerTeam,
                           color: const Color(0xFF10B981), // Emerald
+                          sport: match.sport,
                         ),
                         const SizedBox(height: 24),
                         _buildTeamSection(
@@ -282,6 +252,7 @@ class MatchDetailScreen extends StatelessWidget {
                           players: teamBPlayers,
                           maxLimit: maxPerTeam,
                           color: const Color(0xFF38BDF8), // Sky
+                          sport: match.sport,
                         ),
                       ],
                     );
@@ -462,6 +433,7 @@ class MatchDetailScreen extends StatelessWidget {
     required List<UserModel> players,
     required int maxLimit,
     required Color color,
+    required String sport,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -511,7 +483,7 @@ class MatchDetailScreen extends StatelessWidget {
                     ),
                   ),
                   trailing: SkillIndicator(
-                    skillLevel: player.skillLevel,
+                    skillLevel: player.ratingForSport(sport),
                     size: 36,
                     showLabel: false,
                   ),
