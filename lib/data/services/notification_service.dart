@@ -21,7 +21,8 @@ class NotificationService {
         .collection('users')
         .doc(notification.userId)
         .collection('notifications')
-        .add(notification.toMap());
+        .doc(notification.id)
+        .set(notification.toMap());
   }
 
   Future<void> markAsRead(String userId, String notificationId) async {

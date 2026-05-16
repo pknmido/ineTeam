@@ -62,12 +62,9 @@ class NotificationScreen extends StatelessWidget {
         ],
       );
     } else if (notification.type == 'friend_accepted') {
-      return TextButton(
-        onPressed: () {
-          provider.handleFriendAccepted(notification.data['friendId']);
-          provider.deleteNotification(notification.id);
-        },
-        child: const Text('Add to List'),
+      return IconButton(
+        icon: const Icon(Icons.delete_outline),
+        onPressed: () => provider.deleteNotification(notification.id),
       );
     } else {
       return IconButton(

@@ -40,6 +40,13 @@ class NotificationProvider extends ChangeNotifier {
         if (!_isFirstLoad) {
           for (final notification in data) {
             if (!notification.isRead && !_seenNotificationIds.contains(notification.id)) {
+              // Auto-handle 'friend_accepted' to make it bi-directional automatically
+              if (notification.type == 'friend_accepted') {
+                handleFriendAccepted(notification.data['friendId']);
+                // We keep it in the list so user sees the message, but mark as read
+                markAsRead(notification.id);
+              }
+              
               _showLocalNotification(notification.title, notification.body);
               _seenNotificationIds.add(notification.id);
             }
@@ -148,32 +155,41 @@ class NotificationProvider extends ChangeNotifier {
     await deleteNotification(notificationId);
   }
 
-  Future<void> _setupPushNotifications(String userId) async {
-    // 1. Request permissions
-    NotificationSettings settings = await _messaging.requestPermission(
+  Future<void> requestPermission() async {
+    final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-
+    
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      // 2. Get FCM token
-      String? token = await _messaging.getToken();
-      if (token != null) {
-        await _notificationService.updateFcmToken(userId, token);
-      }
-
-      // 3. Setup local notifications for foreground (Non-Web only)
       if (!kIsWeb) {
-        const AndroidInitializationSettings initializationSettingsAndroid =
-            AndroidInitializationSettings('@mipmap/ic_launcher');
-        const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
-        const InitializationSettings initializationSettings = InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsIOS,
-        );
-        await (_localNotifications as dynamic).initialize(initializationSettings);
+        await Permission.notification.request();
       }
+    }
+  }
+
+  Future<void> _setupPushNotifications(String userId) async {
+    // 1. Request permissions (now more robust)
+    await requestPermission();
+
+    // 2. Get FCM token
+    String? token = await _messaging.getToken();
+    if (token != null) {
+      await _notificationService.updateFcmToken(userId, token);
+    }
+
+    // 3. Setup local notifications for foreground (Non-Web only)
+    if (!kIsWeb) {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
+      await (_localNotifications as dynamic).initialize(initializationSettings);
+    }
 
       // 4. Listen for foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -203,8 +219,7 @@ class NotificationProvider extends ChangeNotifier {
         }
       });
     }
-  }
-
+  
   Future<void> _showLocalNotification(String title, String body) async {
     if (kIsWeb) return;
     

@@ -75,7 +75,7 @@ class MatchProvider extends ChangeNotifier {
     _matchesSub = _matchRepository.matchesStream().listen((matches) {
       _matches = matches;
       notifyListeners();
-    });
+    }, onError: (e) => debugPrint('MatchProvider Error (matchesStream): $e'));
 
     // User's joined matches
     _userMatchesSub?.cancel();
@@ -83,7 +83,7 @@ class MatchProvider extends ChangeNotifier {
         _matchRepository.userMatchesStream(userId).listen((matches) {
       _userMatches = matches;
       notifyListeners();
-    });
+    }, onError: (e) => debugPrint('MatchProvider Error (userMatchesStream): $e'));
 
     // User's created matches
     _createdMatchesSub?.cancel();
@@ -91,7 +91,7 @@ class MatchProvider extends ChangeNotifier {
         _matchRepository.createdMatchesStream(userId).listen((matches) {
       _createdMatches = matches;
       notifyListeners();
-    });
+    }, onError: (e) => debugPrint('MatchProvider Error (createdMatchesStream): $e'));
 
     _startReminderTimer(userId);
   }

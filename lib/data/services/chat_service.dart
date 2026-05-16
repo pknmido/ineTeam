@@ -8,9 +8,13 @@ class ChatService {
     return _firestore
         .collection('chats')
         .where('participantIds', arrayContains: userId)
-        .orderBy('lastMessageTime', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => ChatModel.fromMap(doc.data(), doc.id)).toList());
+        .map((snap) {
+          final chats = snap.docs.map((doc) => ChatModel.fromMap(doc.data(), doc.id)).toList();
+          // Sort in memory to avoid requiring a composite index
+          chats.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
+          return chats;
+        });
   }
 
   Stream<List<MessageModel>> getChatMessages(String chatId) {

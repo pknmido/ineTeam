@@ -71,4 +71,22 @@ class UserService {
     }
     return users;
   }
+
+  /// Mutual unfriending between two users.
+  Future<void> unfriend(String userId, String friendId) async {
+    final batch = _firestore.batch();
+    
+    final userRef = usersCollection.doc(userId);
+    final friendRef = usersCollection.doc(friendId);
+    
+    batch.update(userRef, {
+      'friends': FieldValue.arrayRemove([friendId]),
+    });
+    
+    batch.update(friendRef, {
+      'friends': FieldValue.arrayRemove([userId]),
+    });
+    
+    await batch.commit();
+  }
 }

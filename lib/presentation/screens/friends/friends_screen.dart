@@ -255,9 +255,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           }
                         },
                       ),
-                      onTap: () {
-                        // TODO: Open profile
-                      },
+                      onTap: () => context.push('/user/${friend.uid}'),
                     )),
                 if (chatProvider.chats.isNotEmpty)
                   Padding(

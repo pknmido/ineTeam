@@ -51,18 +51,26 @@ class MyMatchesScreen extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 80),
-            itemCount: upcoming.length,
-            itemBuilder: (context, index) {
-              final match = upcoming[index];
-              return MatchCard(
-                match: match,
-                currentUserId: userId,
-                isMyMatchesView: true,
-                onTap: () => context.push('/match/${match.id}'),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              if (userId.isNotEmpty) {
+                context.read<MatchProvider>().initStreams(userId);
+              }
+              await Future.delayed(const Duration(milliseconds: 500));
             },
+            child: ListView.builder(
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
+              itemCount: upcoming.length,
+              itemBuilder: (context, index) {
+                final match = upcoming[index];
+                return MatchCard(
+                  match: match,
+                  currentUserId: userId,
+                  isMyMatchesView: true,
+                  onTap: () => context.push('/match/${match.id}'),
+                );
+              },
+            ),
           );
         },
       ),

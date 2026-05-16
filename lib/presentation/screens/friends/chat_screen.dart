@@ -34,6 +34,10 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
 
+    if (chat.participantIds.isEmpty && widget.chatId.isNotEmpty) {
+       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(chat.isGroup ? chat.groupName ?? 'Group' : 'Chat'),
