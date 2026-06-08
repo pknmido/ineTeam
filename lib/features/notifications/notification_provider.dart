@@ -23,7 +23,7 @@ class NotificationProvider extends ChangeNotifier {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   List<NotificationModel> get notifications => _notifications;
-  int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  int get unreadCount => _notifications.where((n) => !n.isRead && n.type != 'chat_message').length;
 
   final Set<String> _seenNotificationIds = {};
   bool _isFirstLoad = true;

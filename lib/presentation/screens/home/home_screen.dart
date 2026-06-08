@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/matches/match_provider.dart';
+import '../../../features/notifications/notification_provider.dart';
+import '../../../features/chat/chat_provider.dart';
 import '../../widgets/match_card.dart';
 import '../../widgets/sport_chip.dart';
 import '../../widgets/empty_state.dart';
@@ -30,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final matchProvider = context.watch<MatchProvider>();
+    final notificationProvider = context.watch<NotificationProvider>();
+    final chatProvider = context.watch<ChatProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -64,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
         actions: [
+          // 1. Search toggle
           IconButton(
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             onPressed: () {
@@ -75,6 +80,56 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               });
             },
+          ),
+          // 2. Notifications
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () => context.push('/notifications'),
+              ),
+              if (notificationProvider.unreadCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${notificationProvider.unreadCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // 3. Chat
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                onPressed: () => context.push('/friends'),
+              ),
+              if (chatProvider.unreadChatCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${chatProvider.unreadChatCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

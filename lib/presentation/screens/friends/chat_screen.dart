@@ -20,6 +20,47 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final UserService _userService = UserService();
+  UserModel? _otherUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOtherUser();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().markChatAsRead(widget.chatId);
+    });
+  }
+
+  Future<void> _loadOtherUser() async {
+    final chatProvider = context.read<ChatProvider>();
+    final currentUserId = context.read<AuthProvider>().userId;
+    final chat = chatProvider.chats.firstWhere(
+      (c) => c.id == widget.chatId,
+      orElse: () => ChatModel(
+        id: widget.chatId,
+        creatorId: '',
+        participantIds: [],
+        lastMessage: '',
+        lastMessageTime: DateTime.now(),
+      ),
+    );
+    if (!chat.isGroup && chat.participantIds.length == 2) {
+      final otherId = chat.participantIds.firstWhere((id) => id != currentUserId, orElse: () => '');
+      if (otherId.isNotEmpty) {
+        final user = await _userService.getUserProfile(otherId);
+        if (mounted) {
+          setState(() => _otherUser = user);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +68,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUserId = context.read<AuthProvider>().userId;
     final theme = Theme.of(context);
 
-    // Get chat info
     final chat = chatProvider.chats.firstWhere(
       (c) => c.id == widget.chatId,
       orElse: () => ChatModel(
@@ -43,31 +83,68 @@ class _ChatScreenState extends State<ChatScreen> {
        return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final otherUserId = chat.isGroup
+        ? ''
+        : chat.participantIds.firstWhere((id) => id != currentUserId, orElse: () => '');
+    final titleName = chat.isGroup
+        ? (chat.groupName ?? 'Group')
+        : (_otherUser?.name ?? 'Chat');
+    final titleAvatar = chat.isGroup
+        ? null
+        : _otherUser;
+
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          onTap: chat.isGroup ? () => _showGroupInfo(context, chat) : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          onTap: () {
+            if (chat.isGroup) {
+              _showGroupInfo(context, chat);
+            } else if (otherUserId.isNotEmpty) {
+              context.push('/user/$otherUserId');
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                chat.isGroup ? chat.groupName ?? 'Group' : 'Chat',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
               if (chat.isGroup)
-                Text(
-                  'Tap for info',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                const CircleAvatar(
+                  radius: 16,
+                  child: Icon(Icons.group, size: 18),
+                )
+              else
+                PlayerAvatar(
+                  name: titleAvatar?.name ?? '',
+                  imageUrl: titleAvatar?.profilePictureUrl,
+                  radius: 16,
                 ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titleName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (chat.isGroup)
+                      Text(
+                        'Tap for info',
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
       body: Container(
         decoration: BoxDecoration(
-          color: theme.brightness == Brightness.dark 
-            ? Colors.black.withAlpha(50) 
-            : Colors.grey.withAlpha(20),
+          color: theme.brightness == Brightness.dark
+              ? Colors.black.withAlpha(50)
+              : Colors.grey.withAlpha(20),
         ),
         child: Column(
           children: [
@@ -114,9 +191,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               margin: const EdgeInsets.symmetric(vertical: 2),
                               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
                               decoration: BoxDecoration(
-                                color: isMe 
-                                  ? const Color(0xFF25D366) // WhatsApp Green
-                                  : const Color(0xFF34B7F1), // Modern Blue
+                                color: isMe
+                                    ? const Color(0xFF25D366)
+                                    : const Color(0xFF34B7F1),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -157,7 +234,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
-            
+
             // ── Modern Input Bar ──
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -180,9 +257,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: theme.brightness == Brightness.dark 
-                          ? Colors.white.withAlpha(20) 
-                          : Colors.grey.withAlpha(20),
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withAlpha(20)
+                            : Colors.grey.withAlpha(20),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: TextField(
@@ -223,7 +300,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showEmojiPicker(BuildContext context) {
     final emojis = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
@@ -359,8 +436,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (confirm == true && context.mounted) {
                       await context.read<ChatProvider>().deleteGroup(chat.id);
                       if (context.mounted) {
-                        Navigator.pop(context); // Close dialog
-                        context.pop(); // Go back from chat
+                        Navigator.pop(context);
+                        context.pop();
                       }
                     }
                   },
@@ -374,8 +451,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (confirm == true && context.mounted) {
                       await context.read<ChatProvider>().leaveGroup(chat.id);
                       if (context.mounted) {
-                        Navigator.pop(context); // Close dialog
-                        context.pop(); // Go back from chat
+                        Navigator.pop(context);
+                        context.pop();
                       }
                     }
                   },
@@ -473,7 +550,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, true),
             child: Text(title, style: const TextStyle(color: Colors.red)),
           ),
         ],

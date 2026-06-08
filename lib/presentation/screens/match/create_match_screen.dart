@@ -461,9 +461,9 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                   ),
                   RangeSlider(
                     values: _skillRange,
-                    min: 1,
+                    min: 10,
                     max: 100,
-                    divisions: 99,
+                    divisions: 9,
                     activeColor: sportColor,
                     labels: RangeLabels(
                       '${_skillRange.start.round()}',

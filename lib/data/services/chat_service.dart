@@ -54,6 +54,7 @@ class ChatService {
       chatId = _firestore.collection('chats').doc().id;
     }
 
+    final now = DateTime.now();
     final newChat = ChatModel(
       id: chatId,
       creatorId: currentUserId,
@@ -61,7 +62,8 @@ class ChatService {
       isGroup: isGroup,
       groupName: groupName,
       lastMessage: '',
-      lastMessageTime: DateTime.now(),
+      lastMessageTime: now,
+      lastReadAt: {currentUserId: now},
     );
 
     try {
@@ -102,6 +104,30 @@ class ChatService {
     await batch.commit();
   }
 
+  Future<void> updateLastReadAt(String chatId, String userId, DateTime timestamp) async {
+    await _firestore.collection('chats').doc(chatId).update({
+      'lastReadAt.$userId': Timestamp.fromDate(timestamp),
+    });
+  }
+
+  Future<void> deleteAllMessages(String chatId) async {
+    final messages = await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .get();
+    final batch = _firestore.batch();
+    for (final doc in messages.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.update(_firestore.collection('chats').doc(chatId), {
+      'lastMessage': '',
+      'lastMessageSenderId': '',
+      'lastMessageTime': Timestamp.fromDate(DateTime.now()),
+    });
+    await batch.commit();
+  }
+
   Future<void> sendMessage(String chatId, String senderId, String text) async {
     // 1. Get chat info to know recipients
     final chatDoc = await _firestore.collection('chats').doc(chatId).get();
@@ -128,6 +154,7 @@ class ChatService {
     batch.update(chatRef, {
       'lastMessage': text,
       'lastMessageTime': Timestamp.fromDate(message.timestamp),
+      'lastMessageSenderId': senderId,
     });
 
     await batch.commit();

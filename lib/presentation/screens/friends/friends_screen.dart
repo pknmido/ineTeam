@@ -221,6 +221,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
     final theme = Theme.of(context);
+    final currentUserId = context.read<AuthProvider>().userId;
     final groups = chatProvider.chats.where((c) => c.isGroup).toList();
 
     return Scaffold(
@@ -257,24 +258,61 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: Text('Friends', style: theme.textTheme.titleLarge),
                   ),
-                ..._friends.map((friend) => ListTile(
-                      leading: PlayerAvatar(
-                        name: friend.name,
-                        imageUrl: friend.profilePictureUrl,
-                        radius: 20,
-                      ),
-                      title: Text(friend.name),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.message),
-                        onPressed: () async {
-                          final chat = await context.read<ChatProvider>().getOrCreateDirectChat(friend.uid);
+                ..._friends.map((friend) {
+                      final ids = [friend.uid, currentUserId]..sort();
+                      final chat = chatProvider.chats.cast<ChatModel?>().firstWhere(
+                        (c) => c?.id == ids.join('_'),
+                        orElse: () => null,
+                      );
+                      final hasUnread = chat != null
+                          && chat.lastMessageSenderId != currentUserId
+                          && chat.lastMessage.isNotEmpty
+                          && (chat.lastReadAt[currentUserId] == null
+                              || chat.lastMessageTime.isAfter(chat.lastReadAt[currentUserId]!));
+                      return ListTile(
+                        leading: PlayerAvatar(
+                          name: friend.name,
+                          imageUrl: friend.profilePictureUrl,
+                          radius: 20,
+                        ),
+                        title: Row(
+                          children: [
+                            Flexible(child: Text(friend.name, overflow: TextOverflow.ellipsis)),
+                            if (hasUnread)
+                              Container(
+                                margin: const EdgeInsets.only(left: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '1',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
+                        ),
+                        subtitle: chat != null && chat.lastMessage.isNotEmpty
+                            ? Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis)
+                            : null,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.message),
+                          onPressed: () async {
+                            final newChat = await context.read<ChatProvider>().getOrCreateDirectChat(friend.uid);
+                            if (context.mounted) {
+                              context.push('/chat/${newChat.id}');
+                            }
+                          },
+                        ),
+                        onTap: () async {
+                          final newChat = await context.read<ChatProvider>().getOrCreateDirectChat(friend.uid);
                           if (context.mounted) {
-                            context.push('/chat/${chat.id}');
+                            context.push('/chat/${newChat.id}');
                           }
                         },
-                      ),
-                      onTap: () => context.push('/user/${friend.uid}'),
-                    )),
+                      );
+                    }),
               ],
             ),
     );
@@ -335,18 +373,46 @@ class ChatTile extends StatelessWidget {
 
   ChatTile({required this.chat, required this.currentUserId});
 
+  bool get _hasUnread {
+    if (chat.lastMessageSenderId == currentUserId) return false;
+    if (chat.lastMessage.isEmpty) return false;
+    final lastRead = chat.lastReadAt[currentUserId];
+    if (lastRead == null) return true;
+    return chat.lastMessageTime.isAfter(lastRead);
+  }
+
+  Widget _buildUnreadBadge() {
+    if (!_hasUnread) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: const BoxDecoration(
+        color: Colors.green,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '1',
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (chat.isGroup) {
       return ListTile(
         leading: CircleAvatar(child: const Icon(Icons.group)),
-        title: Text(chat.groupName ?? 'Group Chat'),
+        title: Row(
+          children: [
+            Flexible(child: Text(chat.groupName ?? 'Group Chat', overflow: TextOverflow.ellipsis)),
+            _buildUnreadBadge(),
+          ],
+        ),
         subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
         onTap: () => context.push('/chat/${chat.id}'),
       );
     }
 
-    // For direct chats, fetch the other person's name
     final otherId = chat.participantIds.firstWhere((id) => id != currentUserId, orElse: () => '');
     
     return FutureBuilder<UserModel?>(
@@ -359,7 +425,12 @@ class ChatTile extends StatelessWidget {
             imageUrl: snapshot.data?.profilePictureUrl,
             radius: 20,
           ),
-          title: Text(name),
+          title: Row(
+            children: [
+              Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
+              _buildUnreadBadge(),
+            ],
+          ),
           subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
           onTap: () => context.push('/chat/${chat.id}'),
         );

@@ -189,6 +189,31 @@ class MatchProvider extends ChangeNotifier {
       );
 
       await _matchRepository.createMatch(match);
+
+      // Notify all friends about the new match
+      try {
+        final userService = UserService();
+        final creatorProfile = await userService.getUserProfile(creatorId);
+        if (creatorProfile != null) {
+          final notifService = NotificationService();
+          for (final friendId in creatorProfile.friends) {
+            await notifService.sendNotification(
+              NotificationModel(
+                id: _uuid.v4(),
+                userId: friendId,
+                title: 'New Match Created',
+                body: '$creatorName created a $sport match at $location',
+                type: 'match_created',
+                createdAt: DateTime.now(),
+                data: {'matchId': match.id},
+              ),
+            );
+          }
+        }
+      } catch (_) {
+        // Friend notifications are best-effort
+      }
+
       return true;
     } on MatchRepositoryException catch (e) {
       _errorMessage = e.message;

@@ -10,7 +10,32 @@ class ChatProvider extends ChangeNotifier {
   List<ChatModel> _chats = [];
   StreamSubscription? _chatsSub;
 
+  final Map<String, String> _chatBackgrounds = {};
+
   List<ChatModel> get chats => _chats;
+
+  int get unreadChatCount {
+    if (_userId == null) return 0;
+    return _chats.where((chat) {
+      if (chat.lastMessageSenderId == _userId) return false;
+      if (chat.lastMessage.isEmpty) return false;
+      final lastRead = chat.lastReadAt[_userId];
+      if (lastRead == null) return true;
+      return chat.lastMessageTime.isAfter(lastRead);
+    }).length;
+  }
+
+  String? getChatBackground(String chatId) => _chatBackgrounds[chatId];
+
+  void setChatBackground(String chatId, String url) {
+    _chatBackgrounds[chatId] = url;
+    notifyListeners();
+  }
+
+  void removeChatBackground(String chatId) {
+    _chatBackgrounds.remove(chatId);
+    notifyListeners();
+  }
 
   void initialize(String? userId) {
     if (userId == _userId) return;
@@ -53,6 +78,23 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(String chatId, String text) async {
     if (_userId == null) return;
     await _chatService.sendMessage(chatId, _userId!, text);
+  }
+
+  Future<void> markChatAsRead(String chatId) async {
+    if (_userId == null) return;
+    final now = DateTime.now();
+    await _chatService.updateLastReadAt(chatId, _userId!, now);
+    final idx = _chats.indexWhere((c) => c.id == chatId);
+    if (idx != -1) {
+      _chats[idx] = _chats[idx].copyWith(
+        lastReadAt: {..._chats[idx].lastReadAt, _userId!: now},
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteAllMessages(String chatId) async {
+    await _chatService.deleteAllMessages(chatId);
   }
 
   Future<void> addMembers(String chatId, List<String> userIds) async {

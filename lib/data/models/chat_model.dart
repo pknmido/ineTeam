@@ -8,6 +8,8 @@ class ChatModel {
   final String? groupName;
   final String lastMessage;
   final DateTime lastMessageTime;
+  final String lastMessageSenderId;
+  final Map<String, DateTime> lastReadAt;
 
   const ChatModel({
     required this.id,
@@ -17,9 +19,19 @@ class ChatModel {
     this.groupName,
     required this.lastMessage,
     required this.lastMessageTime,
+    this.lastMessageSenderId = '',
+    this.lastReadAt = const {},
   });
 
   factory ChatModel.fromMap(Map<String, dynamic> map, String id) {
+    final rawLastReadAt = map['lastReadAt'];
+    Map<String, DateTime> lastReadAt = {};
+    if (rawLastReadAt is Map) {
+      lastReadAt = rawLastReadAt.map((k, v) => MapEntry(
+            k.toString(),
+            (v as Timestamp).toDate(),
+          ));
+    }
     return ChatModel(
       id: id,
       creatorId: map['creatorId'] ?? '',
@@ -28,6 +40,8 @@ class ChatModel {
       groupName: map['groupName'],
       lastMessage: map['lastMessage'] ?? '',
       lastMessageTime: (map['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageSenderId: map['lastMessageSenderId'] ?? '',
+      lastReadAt: lastReadAt,
     );
   }
 
@@ -39,7 +53,33 @@ class ChatModel {
       'groupName': groupName,
       'lastMessage': lastMessage,
       'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'lastMessageSenderId': lastMessageSenderId,
+      'lastReadAt': lastReadAt.map((k, v) => MapEntry(k, Timestamp.fromDate(v))),
     };
+  }
+
+  ChatModel copyWith({
+    String? id,
+    String? creatorId,
+    List<String>? participantIds,
+    bool? isGroup,
+    String? groupName,
+    String? lastMessage,
+    DateTime? lastMessageTime,
+    String? lastMessageSenderId,
+    Map<String, DateTime>? lastReadAt,
+  }) {
+    return ChatModel(
+      id: id ?? this.id,
+      creatorId: creatorId ?? this.creatorId,
+      participantIds: participantIds ?? this.participantIds,
+      isGroup: isGroup ?? this.isGroup,
+      groupName: groupName ?? this.groupName,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
+      lastMessageSenderId: lastMessageSenderId ?? this.lastMessageSenderId,
+      lastReadAt: lastReadAt ?? this.lastReadAt,
+    );
   }
 }
 

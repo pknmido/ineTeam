@@ -55,7 +55,10 @@ class UserDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                if (!isMe)
+                if (!isMe) ...[
+                  // Games played together
+                  _buildGamesTogether(context, profile),
+                  const SizedBox(height: 16),
                   Column(
                     children: [
                       _buildActionButton(context, theme, profile),
@@ -83,6 +86,7 @@ class UserDetailScreen extends StatelessWidget {
                         ),
                     ],
                   ),
+                ],
 
                 const SizedBox(height: 24),
                 
@@ -162,6 +166,37 @@ class UserDetailScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildGamesTogether(BuildContext context, UserModel profile) {
+    final currentUser = context.read<AuthProvider>().userProfile;
+    if (currentUser == null) return const SizedBox.shrink();
+    final myMatchIds = {...currentUser.joinedMatches, ...currentUser.createdMatches};
+    final theirMatchIds = {...profile.joinedMatches, ...profile.createdMatches};
+    final together = myMatchIds.intersection(theirMatchIds).length;
+    if (together == 0) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withAlpha(15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.sports_esports, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            '$together game${together > 1 ? 's' : ''} played together',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

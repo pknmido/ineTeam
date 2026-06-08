@@ -1,2 +1,12 @@
 node_modules/
 *.local
+
+# Firebase local firmware/logs
+.runtimeconfig.json
+firebase-debug.log
+ui-debug.log
+
+# Secret keys (If you downloaded a service account JSON, NEVER commit it)
+*.json
+!package.json
+!package-lock.json

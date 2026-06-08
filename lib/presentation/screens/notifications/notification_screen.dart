@@ -45,6 +45,11 @@ class NotificationScreen extends StatelessWidget {
                       if (chatId != null) {
                         context.push('/chat/$chatId');
                       }
+                    } else if (notification.type == 'match_created') {
+                      final matchId = notification.data['matchId'];
+                      if (matchId != null) {
+                        context.push('/match/$matchId');
+                      }
                     }
                   },
                 );
@@ -88,6 +93,8 @@ class NotificationScreen extends StatelessWidget {
         return Icons.timer;
       case 'chat_message':
         return Icons.chat_bubble_outline;
+      case 'match_created':
+        return Icons.add_circle;
       default:
         return Icons.notifications;
     }

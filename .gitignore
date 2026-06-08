@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase CLI tracking and local emulator caches
+.firebase/
+*-debug.log
+ui-debug.log
+
+# Android Keystores and private properties
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/*.keystore
+android/app/*.p12
+
+# Explicitly ignore any service account JSONs placed in the root for testing
+*.json
+!pubspec.json
+!package.json

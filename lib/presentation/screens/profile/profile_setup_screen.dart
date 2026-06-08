@@ -306,9 +306,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             ),
                             Slider(
                               value: skillVal,
-                              min: 1,
+                              min: 10,
                               max: 100,
-                              divisions: 99,
+                              divisions: 9,
                               activeColor: Helpers.skillColor(skillVal.round()),
                               label:
                                   '${skillVal.round()} — ${Helpers.skillLabel(skillVal.round())}',
