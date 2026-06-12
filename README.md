@@ -2,7 +2,12 @@
 
 A new Flutter project for matchmaking.
 
-## Getting Started
+# 🌐 Download from website
+
+To download the app, visit the following website:  
+**[ineTeam](https://pknmido.github.io/ineTeam/)**
+
+## Getting Started for Devs
 
 Before you begin, ensure you have the following installed:
 * [Flutter SDK](https://flutter.dev) (latest stable version)
